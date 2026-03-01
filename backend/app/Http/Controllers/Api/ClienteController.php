@@ -34,12 +34,18 @@ class ClienteController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'nombre'   => 'required|string|max:100',
-            'apellido' => 'required|string|max:100',
-            'telefono' => 'nullable|string|max:20',
-            'dni'      => 'required|string|max:20|unique:clientes,dni',
-            'foto_dni' => 'nullable|image|mimes:jpg,jpeg,png,pdf|max:5120',
+            'nombre'           => 'required|string|max:100',
+            'apellido'         => 'required|string|max:100',
+            'telefono'         => 'nullable|string|max:20',
+            'dni'              => 'required|string|max:20|unique:clientes,dni',
+            'foto_dni'         => 'nullable|image|mimes:jpg,jpeg,png,pdf|max:5120',
+            'direccion'        => 'nullable|string|max:200',
+            'codigo_postal'    => 'nullable|string|max:10',
+            'ciudad'           => 'nullable|string|max:100',
+            'necesita_factura' => 'nullable|boolean',
         ]);
+
+        $validated['necesita_factura'] = $request->boolean('necesita_factura');
 
         if ($request->hasFile('foto_dni')) {
             $path = $request->file('foto_dni')->store('clientes/dni', 'public');
@@ -59,12 +65,18 @@ class ClienteController extends Controller
     public function update(Request $request, Cliente $cliente): JsonResponse
     {
         $validated = $request->validate([
-            'nombre'   => 'required|string|max:100',
-            'apellido' => 'required|string|max:100',
-            'telefono' => 'nullable|string|max:20',
-            'dni'      => ['required', 'string', 'max:20', Rule::unique('clientes', 'dni')->ignore($cliente->id)],
-            'foto_dni' => 'nullable|image|mimes:jpg,jpeg,png,pdf|max:5120',
+            'nombre'           => 'required|string|max:100',
+            'apellido'         => 'required|string|max:100',
+            'telefono'         => 'nullable|string|max:20',
+            'dni'              => ['required', 'string', 'max:20', Rule::unique('clientes', 'dni')->ignore($cliente->id)],
+            'foto_dni'         => 'nullable|image|mimes:jpg,jpeg,png,pdf|max:5120',
+            'direccion'        => 'nullable|string|max:200',
+            'codigo_postal'    => 'nullable|string|max:10',
+            'ciudad'           => 'nullable|string|max:100',
+            'necesita_factura' => 'nullable|boolean',
         ]);
+
+        $validated['necesita_factura'] = $request->boolean('necesita_factura');
 
         if ($request->hasFile('foto_dni')) {
             // Eliminar foto anterior si existe

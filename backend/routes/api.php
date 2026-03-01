@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClienteController;
+use App\Http\Controllers\Api\FacturaController;
 use App\Http\Controllers\Api\GastoController;
 use App\Http\Controllers\Api\PagoAlquilerController;
 use App\Http\Controllers\Api\PisoController;
@@ -10,6 +11,12 @@ use App\Http\Controllers\Api\TrasteroController;
 use Illuminate\Support\Facades\Route;
 
 // Clientes
+Route::get('logo', function () {
+    $path = storage_path('app/public/logo.jpg');
+    if (!file_exists($path)) abort(404);
+    return response()->file($path, ['Content-Type' => 'image/jpeg']);
+});
+
 Route::apiResource('clientes', ClienteController::class);
 
 // Trasteros
@@ -45,3 +52,6 @@ Route::get('tamanyo-trasteros', [TamanyoTrasteroController::class, 'index']);
 Route::post('tamanyo-trasteros', [TamanyoTrasteroController::class, 'store']);
 Route::put('tamanyo-trasteros/{tamanyoTrastero}', [TamanyoTrasteroController::class, 'update']);
 Route::delete('tamanyo-trasteros/{tamanyoTrastero}', [TamanyoTrasteroController::class, 'destroy']);
+
+// Facturas
+Route::get('facturas', [FacturaController::class, 'index']);

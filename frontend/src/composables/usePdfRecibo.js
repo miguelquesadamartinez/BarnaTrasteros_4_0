@@ -172,5 +172,164 @@ export function usePdfRecibo() {
     doc.save(`resumen_gasto_${gasto.id}_${gasto.tipo}.pdf`)
   }
 
-  return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal }
+  /**
+   * Genera una factura formal para un cliente con todos sus cargos del mes.
+   * @param {Object} factura - { cliente, pagos, importe_total, total_pagado }
+   * @param {number} mes
+   * @param {number} anyo
+   */
+  async function generarFacturaCliente(factura, mes, anyo) {
+    const { cliente, pagos, importe_total, total_pagado } = factura
+    const hoy = new Date().toLocaleDateString('es-ES')
+    const numFactura = `Factura ${anyo} - ${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
+
+    // Cargar logo JPG desde la API del backend (con CORS)
+    let logoData = null
+    try {
+      const backendBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+      const response = await fetch(`${backendBase}/logo`)
+      if (response.ok) {
+        const blob = await response.blob()
+        logoData = await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result)
+          reader.onerror = () => resolve(null)
+          reader.readAsDataURL(blob)
+        })
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar el logo:', e)
+    }
+
+    const doc = new jsPDF()
+
+    // Cabecera roja
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, 210, 5, 'F')
+
+    doc.setFillColor(192, 57, 43)
+    doc.rect(0, 5, 210, 36, 'F')
+    
+    // Texto de empresa siempre visible
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('BARNATRASTEROS', 15, 14)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Sistema de Gestión de Alquileres', 15, 24)
+    // Logo encima del texto si se cargó
+    if (logoData) {
+      doc.addImage(logoData, 'JPEG', 12, 10, 72, 26)
+    }
+
+    // Número factura y fecha
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`FACTURA ${numFactura}`, 195, 20, { align: 'right' })
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Período: ${MESES[mes]} ${anyo}`, 195, 28, { align: 'right' })
+    doc.text(`Emitida: ${hoy}`, 195, 34, { align: 'right' })
+
+    // Datos cliente
+    let y = 50
+    doc.setFillColor(248, 248, 248)
+    doc.rect(15, y - 4, 85, 38, 'F')
+    doc.setDrawColor(220, 220, 220)
+    doc.rect(15, y - 4, 85, 38, 'S')
+    doc.setTextColor(120, 120, 120)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('DATOS DEL CLIENTE', 18, y + 2)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(30, 30, 30)
+    doc.setFontSize(10)
+    doc.text(`${cliente.nombre} ${cliente.apellido}`, 18, y + 9)
+    doc.setFontSize(9)
+    doc.setTextColor(80, 80, 80)
+    doc.text(`DNI: ${cliente.dni}`, 18, y + 15)
+    if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 18, y + 20)
+    if (cliente.direccion) doc.text(cliente.direccion, 18, y + 25)
+    if (cliente.ciudad) doc.text(`${cliente.codigo_postal || ''} ${cliente.ciudad}`.trim(), 18, y + (cliente.direccion ? 30 : 25))
+
+    // Tabla de conceptos
+    y = 90
+    doc.setFillColor(192, 57, 43)
+    doc.rect(15, y, 180, 9, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Concepto', 18, y + 6.5)
+    doc.text('Período', 100, y + 6.5)
+    doc.text('Importe', 185, y + 6.5, { align: 'right' })
+
+    y += 9
+    const ROW = 9
+    pagos.forEach((p, i) => {
+      const label = p.tipo === 'piso' ? `Alquiler Piso #${p.referencia_id}` : `Alquiler Trastero #${p.referencia_id}`
+      doc.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255)
+      doc.rect(15, y, 180, ROW, 'F')
+      doc.setDrawColor(230, 230, 230)
+      doc.line(15, y + ROW, 195, y + ROW)
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.text(label, 18, y + 6)
+      doc.text(`${MESES[mes]} ${anyo}`, 100, y + 6)
+      doc.setFont('helvetica', 'bold')
+      doc.text(fmt(p.importe_total), 185, y + 6, { align: 'right' })
+      y += ROW
+    })
+
+    // Totales con desglose IVA (IVA se resta del total)
+    const totalFactura  = +importe_total
+    const baseImponible = totalFactura / 1.21
+    const ivaImporte    = totalFactura - baseImponible
+    const totalPagado   = +total_pagado
+    const basePagada    = totalPagado / 1.21
+    const pendiente     = Math.max(0, totalFactura - totalPagado)
+
+    y += 6
+    doc.setDrawColor(192, 57, 43)
+    doc.setLineWidth(0.5)
+    doc.line(120, y, 195, y)
+    y += 5
+
+    const totalesRows = [
+      { lbl: 'Base imponible:',  val: fmt(baseImponible), bold: false },
+      { lbl: 'IVA (21%):',       val: fmt(ivaImporte),    bold: false },
+      { lbl: 'TOTAL FACTURA:',   val: fmt(totalFactura),  bold: true,  highlight: true },
+      { lbl: 'Total pagado:',    val: fmt(totalPagado),   bold: false },
+      { lbl: 'Pendiente:',       val: fmt(pendiente),     bold: pendiente > 0 },
+    ]
+
+    totalesRows.forEach(({ lbl, val, bold, highlight }) => {
+      if (highlight) {
+        doc.setFillColor(192, 57, 43)
+        doc.rect(118, y - 6, 79, 10, 'F')
+        doc.setTextColor(255, 255, 255)
+      } else {
+        doc.setTextColor(80, 80, 80)
+      }
+      doc.setFont('helvetica', bold ? 'bold' : 'normal')
+      doc.setFontSize(bold ? 10 : 9)
+      doc.text(lbl, 130, y)
+      doc.setFont('helvetica', bold ? 'bold' : 'normal')
+      doc.text(val, 185, y, { align: 'right' })
+      y += 8
+    })
+
+    // Pie
+    doc.setTextColor(160, 160, 160)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('BarnaTrasteros — Documento generado automáticamente', 105, 284, { align: 'center' })
+    doc.text(`Generado el ${hoy}`, 105, 289, { align: 'center' })
+
+    doc.save(`${numFactura}_${cliente.apellido.replace(/\s+/g,'_')}.pdf`)
+  }
+
+  return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal, generarFacturaCliente }
 }

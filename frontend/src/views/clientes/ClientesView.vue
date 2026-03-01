@@ -100,6 +100,27 @@
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Dirección</label>
+          <input v-model="form.direccion" class="form-control" placeholder="Carrer de..., 123" />
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:0 0 140px">
+            <label class="form-label">Código Postal</label>
+            <input v-model="form.codigo_postal" class="form-control" placeholder="08001" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ciudad</label>
+            <input v-model="form.ciudad" class="form-control" placeholder="Barcelona" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+            <input type="checkbox" v-model="form.necesita_factura" style="width:16px;height:16px" />
+            <span>Necesita factura mensual</span>
+            <small class="text-muted">(se incluirá en la generación automática de facturas)</small>
+          </label>
+        </div>
+        <div class="form-group">
           <label class="form-label">Foto del DNI</label>
           <input type="file" class="form-control" accept="image/*,.pdf" @change="onFotoChange" />
           <small class="text-muted">JPG, PNG o PDF. Máx 5MB.</small>
@@ -189,6 +210,7 @@ function fotoUrl(ruta) {
 
 const emptyForm = () => ({
   nombre: '', apellido: '', dni: '', telefono: '',
+  direccion: '', codigo_postal: '', ciudad: '', necesita_factura: false,
   foto_dni_file: null, foto_dni_preview: null,
   trastero_id: null, piso_id: null,
 })
@@ -252,6 +274,10 @@ function openEdit(c) {
     apellido: c.apellido,
     dni: c.dni,
     telefono: c.telefono ?? '',
+    direccion: c.direccion ?? '',
+    codigo_postal: c.codigo_postal ?? '',
+    ciudad: c.ciudad ?? '',
+    necesita_factura: !!c.necesita_factura,
     foto_dni_file: null,
     foto_dni_preview: null,
     trastero_id: trastero?.id ?? null,
@@ -278,6 +304,10 @@ async function save() {
     fd.append('apellido', form.value.apellido)
     fd.append('dni', form.value.dni)
     fd.append('telefono', form.value.telefono || '')
+    fd.append('direccion', form.value.direccion || '')
+    fd.append('codigo_postal', form.value.codigo_postal || '')
+    fd.append('ciudad', form.value.ciudad || '')
+    fd.append('necesita_factura', form.value.necesita_factura ? '1' : '0')
     if (form.value.foto_dni_file) {
       fd.append('foto_dni', form.value.foto_dni_file)
     }

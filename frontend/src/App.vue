@@ -13,6 +13,7 @@
           <button class="nav-dropdown-toggle" @click="dropdownOpen = !dropdownOpen">⚙️ Mantenimiento ▾</button>
           <ul class="nav-dropdown-menu">
             <li><router-link to="/mantenimiento/tamanyo-trasteros" @click="dropdownOpen = false">📐 Tamaños de Trasteros</router-link></li>
+            <li><router-link to="/mantenimiento/facturas" @click="dropdownOpen = false">🧾 Facturas del Mes</router-link></li>
           </ul>
         </li>
       </ul>

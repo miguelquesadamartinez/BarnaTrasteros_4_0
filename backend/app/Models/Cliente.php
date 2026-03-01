@@ -15,6 +15,14 @@ class Cliente extends Model
         'telefono',
         'dni',
         'foto_dni',
+        'direccion',
+        'codigo_postal',
+        'ciudad',
+        'necesita_factura',
+    ];
+
+    protected $casts = [
+        'necesita_factura' => 'boolean',
     ];
 
     public function trasteros(): HasMany
