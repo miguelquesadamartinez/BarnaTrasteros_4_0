@@ -130,6 +130,8 @@ const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
 
+function formatDate(v) { return v ? v.split('T')[0] : '' }
+
 const emptyForm = () => ({
   numero: '', piso: '', precio_mensual: 0,
   cliente_id: null, fecha_inicio_alquiler: '', notas: '',
@@ -166,7 +168,7 @@ function openEdit(p) {
   form.value = {
     numero: p.numero, piso: p.piso, precio_mensual: p.precio_mensual,
     cliente_id: p.cliente_id ?? null,
-    fecha_inicio_alquiler: p.fecha_inicio_alquiler ?? '',
+    fecha_inicio_alquiler: formatDate(p.fecha_inicio_alquiler) ?? '',
     notas: p.notas ?? '', _id: p.id,
   }
   formError.value = ''

@@ -149,6 +149,8 @@ const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
 
+function formatDate(v) { return v ? v.split('T')[0] : '' }
+
 const emptyForm = () => ({
   numero: '', piso: '', tamanyo: '', precio_mensual: 0,
   cliente_id: null, fecha_inicio_alquiler: '', notas: '',
@@ -184,6 +186,7 @@ function openNew() {
 }
 
 function openEdit(t) {
+  console.log('Editando trastero:', t)
   editing.value = true
   form.value = {
     numero: t.numero,
@@ -191,7 +194,7 @@ function openEdit(t) {
     tamanyo: t.tamanyo,
     precio_mensual: t.precio_mensual,
     cliente_id: t.cliente_id ?? null,
-    fecha_inicio_alquiler: t.fecha_inicio_alquiler ?? '',
+    fecha_inicio_alquiler: formatDate(t.fecha_inicio_alquiler) ?? '',
     notas: t.notas ?? '',
     _id: t.id,
   }
