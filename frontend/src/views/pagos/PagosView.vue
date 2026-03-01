@@ -82,10 +82,11 @@
                   <button
                     v-if="p.estado !== 'pagado'"
                     class="btn btn-success btn-sm"
+                    title="Registrar pago"
                     @click="openPago(p)"
                   >💰 Pagar</button>
-                  <button class="btn btn-info btn-sm" @click="openDetalle(p)">📋 Ver</button>
-                  <button class="btn btn-danger btn-sm" @click="confirmDelete(p)">🗑️</button>
+                  <button class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋 Ver</button>
+                  <button class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
                 </div>
               </td>
             </tr>

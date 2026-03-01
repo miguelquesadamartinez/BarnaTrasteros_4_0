@@ -57,8 +57,8 @@
               </td>
               <td>
                 <div class="actions-cell">
-                  <button class="btn btn-warning btn-sm" @click="openEdit(c)">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" @click="confirmDelete(c)">🗑️ Eliminar</button>
+                  <button class="btn btn-warning btn-sm" title="Editar cliente" @click="openEdit(c)">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" title="Eliminar cliente" @click="confirmDelete(c)">🗑️ Eliminar</button>
                 </div>
               </td>
             </tr>

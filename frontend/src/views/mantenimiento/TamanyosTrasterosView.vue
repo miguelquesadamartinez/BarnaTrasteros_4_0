@@ -34,8 +34,8 @@
               </td>
               <td>
                 <div class="actions-cell">
-                  <button class="btn btn-warning btn-sm" @click="openEdit(t)">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" @click="confirmDelete(t)">🗑️ Eliminar</button>
+                  <button class="btn btn-warning btn-sm" title="Editar tamaño" @click="openEdit(t)">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" title="Eliminar tamaño" @click="confirmDelete(t)">🗑️ Eliminar</button>
                 </div>
               </td>
             </tr>
