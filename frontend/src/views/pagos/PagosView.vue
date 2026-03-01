@@ -46,7 +46,6 @@
           <thead>
             <tr>
               <th>Tipo</th>
-              <th>Referencia</th>
               <th>Cliente</th>
               <th>Mes/Año</th>
               <th>Total</th>
@@ -66,7 +65,6 @@
                   {{ p.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero' }}
                 </span>
               </td>
-              <td>ID: {{ p.referencia_id }}</td>
               <td>{{ p.cliente ? `${p.cliente.nombre} ${p.cliente.apellido}` : '—' }}</td>
               <td>{{ mesNombre(p.mes) }} {{ p.anyo }}</td>
               <td>{{ formatMoney(p.importe_total) }}</td>
@@ -146,16 +144,24 @@
                 <th>Fecha</th>
                 <th>Importe</th>
                 <th>Notas</th>
+                <th>Recibo</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!detalleTarget.detalles?.length">
-                <td colspan="3" class="text-center text-muted">Sin pagos registrados</td>
+                <td colspan="4" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
                 <td>{{ formatDate(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                 <td>{{ d.notas || '—' }}</td>
+                <td>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    title="Descargar recibo PDF"
+                    @click="descargarReciboPago(detalleTarget, d)"
+                  >📄 PDF</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -233,11 +239,17 @@ import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
 import AppModal from '@/components/AppModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
+import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
 const store = usePagosStore()
 const clientesStore = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
+const { generarReciboPago } = usePdfRecibo()
+
+function descargarReciboPago(pago, detalle) {
+  generarReciboPago(pago, detalle)
+}
 
 const filters = ref({ tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
 const showPagoModal = ref(false)

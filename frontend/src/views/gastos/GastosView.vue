@@ -143,6 +143,37 @@
           <label class="form-label">Importe total (€) *</label>
           <input v-model.number="form.importe_total" class="form-control" type="number" step="0.01" min="0" required />
         </div>
+        <!-- Pagos realizados (solo edición) -->
+        <div v-if="editTarget && editTarget.detalles && editTarget.detalles.length > 0" class="pagos-realizados">
+          <h4 class="pagos-realizados-title">Pagos realizados</h4>
+          <div class="detail-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Importe</th>
+                  <th>Notas</th>
+                  <th>Recibo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in editTarget.detalles" :key="d.id">
+                  <td>{{ formatDate(d.fecha_pago) }}</td>
+                  <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
+                  <td>{{ d.notas || '—' }}</td>
+                  <td>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      title="Descargar recibo PDF"
+                      @click="descargarReciboGasto(editTarget, d)"
+                    >📄 PDF</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="showForm = false">Cancelar</button>
           <button type="submit" class="btn btn-primary" :disabled="saving">
@@ -227,10 +258,16 @@ import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
 import AppModal from '@/components/AppModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
+import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
 const store = useGastosStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
+const { generarReciboGasto } = usePdfRecibo()
+
+function descargarReciboGasto(gasto, detalle) {
+  generarReciboGasto(gasto, detalle)
+}
 
 const filters = ref({ tipo: '', estado: '' })
 const showForm = ref(false)
@@ -366,7 +403,16 @@ async function registrarPagoGasto() {
   pagoError.value = ''
   pagando.value = true
   try {
-    await store.registrarPagoGasto(pagoTarget.value.id, pagoForm.value)
+    const updatedGasto = await store.registrarPagoGasto(pagoTarget.value.id, pagoForm.value)
+    // Si el modal de edición está abierto para este gasto, actualizarlo
+    if (editTarget.value && editTarget.value.id === updatedGasto.id) {
+      editTarget.value = updatedGasto
+    }
+    // Si el gasto queda completamente pagado, generar recibo automáticamente
+    if (updatedGasto.estado === 'pagado' && updatedGasto.detalles?.length) {
+      const ultimoDetalle = updatedGasto.detalles[updatedGasto.detalles.length - 1]
+      generarReciboGasto(updatedGasto, ultimoDetalle)
+    }
     showPagoModal.value = false
     await loadGastos()
   } catch (e) {
@@ -452,5 +498,16 @@ onMounted(() => {
   font-size: 0.78rem;
   color: var(--gris);
   word-break: break-word;
+}
+.pagos-realizados {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--gris-claro);
+  padding-top: 1rem;
+}
+.pagos-realizados-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gris);
+  margin-bottom: 0.75rem;
 }
 </style>
