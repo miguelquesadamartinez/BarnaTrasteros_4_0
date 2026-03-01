@@ -153,7 +153,7 @@
                 <td colspan="3" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
-                <td>{{ d.fecha_pago }}</td>
+                <td>{{ formatDate(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                 <td>{{ d.notas || '—' }}</td>
               </tr>
@@ -259,6 +259,8 @@ const newForm = ref({ tipo: 'trastero', referencia_id: null, cliente_id: null, m
 function today() {
   return new Date().toISOString().split('T')[0]
 }
+
+function formatDate(v) { return v ? v.split('T')[0] : '' }
 
 function formatMoney(v) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v || 0)
