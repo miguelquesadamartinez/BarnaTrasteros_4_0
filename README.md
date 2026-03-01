@@ -12,6 +12,24 @@ Backend en **Laravel 11** · Frontend en **Vue 3 + Vite + Pinia** · Base de dat
 - **`APP_KEY` válida en `docker-compose.yml`**: se reemplazó el placeholder `base64:placeholder_replace_after_install` por la clave real de 32 bytes, evitando que los contenedores no arrancaran o no ejecutaran migrate/seed.
 - **CMD del Dockerfile más robusto**: `php artisan storage:link` usa `--force` y errores no fatales no interrumpen el arranque del servidor.
 
+### `storage:link` en este proyecto
+
+`php artisan storage:link` crea el enlace simbólico `public/storage` → `storage/app/public`.
+
+Esto permite que los archivos subidos por el backend (por ejemplo, imágenes de gastos o documentos) se puedan servir por URL pública desde el frontend.
+
+- Ruta física del archivo: `storage/app/public/...`
+- URL pública resultante: `/storage/...`
+
+En este proyecto se ejecuta en cada arranque del contenedor `backend` (en el `CMD` del `Dockerfile`):
+
+```bash
+(php artisan storage:link --force 2>/dev/null || true)
+```
+
+- `--force` recrea el enlace si ya existe.
+- `2>/dev/null || true` evita que un fallo puntual del enlace tumbe el arranque completo del backend.
+
 ### Mejoras de rendimiento
 - **Volumen nombrado `backend_vendor`**: la carpeta `vendor/` (miles de archivos PHP) se almacena en el filesystem nativo de Linux del contenedor en vez del bind mount Windows→WSL2, eliminando la latencia de E/S cruzada.
 - **PHP OPcache activado**: los opcodes PHP se cachean en memoria (`256 MB`, `20.000 archivos`), evitando recompilaciones en cada request.
