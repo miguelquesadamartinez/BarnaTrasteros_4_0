@@ -10,7 +10,7 @@
       <div class="filters-bar">
         <div class="filter-item">
           <span class="filter-label">Tipo</span>
-          <select v-model="filters.tipo" class="form-control" @change="loadPagos">
+          <select v-model="filters.tipo" class="form-control" @change="loadPagos(1)">
             <option value="">Todos</option>
             <option value="trastero">Trasteros</option>
             <option value="piso">Pisos</option>
@@ -18,7 +18,7 @@
         </div>
         <div class="filter-item">
           <span class="filter-label">Estado</span>
-          <select v-model="filters.estado" class="form-control" @change="loadPagos">
+          <select v-model="filters.estado" class="form-control" @change="loadPagos(1)">
             <option value="">Todos</option>
             <option value="pendiente">Pendiente</option>
             <option value="parcial">Parcial</option>
@@ -27,11 +27,11 @@
         </div>
         <div class="filter-item">
           <span class="filter-label">Año</span>
-          <input v-model="filters.anyo" class="form-control" type="number" placeholder="Año" @change="loadPagos" />
+          <input v-model="filters.anyo" class="form-control" type="number" placeholder="Año" @change="loadPagos(1)" />
         </div>
         <div class="filter-item">
           <span class="filter-label">Mes</span>
-          <select v-model="filters.mes" class="form-control" @change="loadPagos">
+          <select v-model="filters.mes" class="form-control" @change="loadPagos(1)">
             <option value="">Todos</option>
             <option v-for="m in 12" :key="m" :value="m">{{ mesNombre(m) }}</option>
           </select>
@@ -99,6 +99,14 @@
           </tbody>
         </table>
       </div>
+      <AppPagination
+        :current-page="store.pagination.current_page"
+        :last-page="store.pagination.last_page"
+        :total="store.pagination.total"
+        :from="store.pagination.from"
+        :to="store.pagination.to"
+        @change="onPageChange"
+      />
     </div>
 
     <!-- Modal: Registrar Pago -->
@@ -238,6 +246,7 @@ import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
 import AppModal from '@/components/AppModal.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
@@ -252,6 +261,7 @@ function descargarReciboPago(pago, detalle) {
 }
 
 const filters = ref({ tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
+const currentPage = ref(1)
 const showPagoModal = ref(false)
 const showDetalle = ref(false)
 const showNewModal = ref(false)
@@ -311,8 +321,9 @@ const pisoOptions = computed(() =>
   pisosStore.pisos.map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
 )
 
-async function loadPagos() {
-  const params = {}
+async function loadPagos(page = currentPage.value) {
+  currentPage.value = page
+  const params = { page }
   if (filters.value.tipo) params.tipo = filters.value.tipo
   if (filters.value.estado) params.estado = filters.value.estado
   if (filters.value.anyo) params.anyo = filters.value.anyo
@@ -320,9 +331,14 @@ async function loadPagos() {
   await store.fetchPagos(params)
 }
 
+function onPageChange(page) {
+  loadPagos(page)
+}
+
 function clearFilters() {
   filters.value = { tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' }
-  loadPagos()
+  currentPage.value = 1
+  loadPagos(1)
 }
 
 function openPago(p) {
@@ -362,7 +378,7 @@ async function registrarPago() {
       notas: pagoForm.value.notas,
     })
     pagoSuccess.value = `Pago registrado. ${result.sobrante > 0 ? `Sobrante no aplicado: ${formatMoney(result.sobrante)}` : ''}`
-    await loadPagos()
+    await loadPagos(currentPage.value)
   } catch (e) {
     pagoError.value = e.displayMessage || 'Error al registrar el pago'
   } finally {
@@ -376,7 +392,7 @@ async function crearRegistro() {
   try {
     await store.crearPago({ ...newForm.value })
     showNewModal.value = false
-    await loadPagos()
+    await loadPagos(1)
   } catch (e) {
     newError.value = e.displayMessage || 'Error al crear el registro'
   } finally {
@@ -389,6 +405,7 @@ async function doDelete() {
   try {
     await store.deletePago(toDelete.value.id)
     showDelete.value = false
+    await loadPagos(currentPage.value)
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')
   } finally {
@@ -397,8 +414,8 @@ async function doDelete() {
 }
 
 onMounted(() => {
-  loadPagos()
-  clientesStore.fetchClientes()
+  loadPagos(1)
+  clientesStore.fetchClientes({ page: 1, per_page: 1000 })
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })

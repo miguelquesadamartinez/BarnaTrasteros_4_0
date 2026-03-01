@@ -564,3 +564,67 @@ table tr:hover td { background: var(--gris-bg); }
   background: var(--rojo-claro);
   color: var(--rojo);
 }
+
+/* ============================================================
+   Paginación
+   ============================================================ */
+.pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--gris-borde);
+  background: var(--gris-bg);
+}
+
+.pagination-info {
+  font-size: .85rem;
+  color: var(--gris-texto);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 .5rem;
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  background: var(--blanco);
+  color: var(--negro);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: var(--transicion);
+  line-height: 1;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--rojo-claro);
+  border-color: var(--rojo-borde);
+  color: var(--rojo);
+}
+
+.page-btn--active {
+  background: var(--rojo) !important;
+  border-color: var(--rojo) !important;
+  color: var(--blanco) !important;
+  font-weight: 700;
+}
+
+.page-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.page-ellipsis {
+  padding: 0 .35rem;
+  color: var(--gris-texto);
+  font-size: .9rem;
+  line-height: 32px;
+}

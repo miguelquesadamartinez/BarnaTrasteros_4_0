@@ -4,6 +4,7 @@ import api from '@/api'
 
 export const useGastosStore = defineStore('gastos', () => {
   const gastos = ref([])
+  const pagination = ref({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0, per_page: 15 })
   const loading = ref(false)
   const error = ref(null)
 
@@ -12,7 +13,15 @@ export const useGastosStore = defineStore('gastos', () => {
     error.value = null
     try {
       const { data } = await api.get('/gastos', { params })
-      gastos.value = data
+      gastos.value = data.data
+      pagination.value = {
+        current_page: data.current_page,
+        last_page: data.last_page,
+        total: data.total,
+        from: data.from ?? 0,
+        to: data.to ?? 0,
+        per_page: data.per_page,
+      }
     } catch (e) {
       error.value = e.displayMessage || 'Error al cargar gastos'
     } finally {
@@ -67,7 +76,7 @@ export const useGastosStore = defineStore('gastos', () => {
   }
 
   return {
-    gastos, loading, error,
+    gastos, pagination, loading, error,
     fetchGastos, createGasto, updateGasto, deleteGasto,
     registrarPagoGasto, subirImagenes, eliminarImagen,
   }

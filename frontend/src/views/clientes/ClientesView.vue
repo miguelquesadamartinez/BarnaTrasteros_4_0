@@ -13,7 +13,7 @@
           style="max-width: 320px"
           placeholder="Buscar por nombre, apellido o DNI..."
         />
-        <span class="text-muted">{{ store.clientes.length }} clientes</span>
+        <span class="text-muted">{{ store.pagination.total }} clientes</span>
       </div>
 
       <div v-if="store.loading" class="spinner-wrapper"><div class="spinner"></div></div>
@@ -32,10 +32,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="filtered.length === 0">
+            <tr v-if="store.clientes.length === 0">
               <td colspan="7" class="text-center text-muted" style="padding:2rem">Sin resultados</td>
             </tr>
-            <tr v-for="c in filtered" :key="c.id">
+            <tr v-for="c in store.clientes" :key="c.id">
               <td><strong>{{ c.nombre }} {{ c.apellido }}</strong></td>
               <td>{{ c.dni }}</td>
               <td>{{ c.telefono || '—' }}</td>
@@ -65,6 +65,14 @@
           </tbody>
         </table>
       </div>
+      <AppPagination
+        :current-page="store.pagination.current_page"
+        :last-page="store.pagination.last_page"
+        :total="store.pagination.total"
+        :from="store.pagination.from"
+        :to="store.pagination.to"
+        @change="onPageChange"
+      />
     </div>
 
     <!-- Modal Formulario -->
@@ -148,11 +156,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
 import AppModal from '@/components/AppModal.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import api from '@/api'
 
@@ -161,6 +170,7 @@ const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
 
 const search = ref('')
+const currentPage = ref(1)
 const showModal = ref(false)
 const showDelete = ref(false)
 const editing = ref(false)
@@ -197,15 +207,20 @@ const pisoOptions = computed(() =>
     .map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
 )
 
-const filtered = computed(() => {
-  const q = search.value.toLowerCase()
-  return store.clientes.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(q) ||
-      c.apellido.toLowerCase().includes(q) ||
-      c.dni.toLowerCase().includes(q)
-  )
+// Debounce de búsqueda: al cambiar el texto, volver a página 1
+let searchTimer = null
+watch(search, (val) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1
+    store.fetchClientes({ search: val, page: 1 })
+  }, 350)
 })
+
+function onPageChange(page) {
+  currentPage.value = page
+  store.fetchClientes({ search: search.value, page })
+}
 
 function onFotoChange(e) {
   const file = e.target.files[0]
@@ -303,7 +318,7 @@ async function save() {
 
     showModal.value = false
     // Refrescar clientes para reflejar relaciones
-    await store.fetchClientes()
+    await store.fetchClientes({ search: search.value, page: currentPage.value })
   } catch (e) {
     formError.value = e.displayMessage || 'Error al guardar'
   } finally {
@@ -316,6 +331,7 @@ async function doDelete() {
   try {
     await store.deleteCliente(toDelete.value.id)
     showDelete.value = false
+    await store.fetchClientes({ search: search.value, page: currentPage.value })
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')
   } finally {
@@ -324,7 +340,7 @@ async function doDelete() {
 }
 
 onMounted(() => {
-  store.fetchClientes()
+  store.fetchClientes({ page: 1 })
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })

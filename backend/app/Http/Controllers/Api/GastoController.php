@@ -25,10 +25,11 @@ class GastoController extends Controller
             $query->where('estado', $request->estado);
         }
 
-        $gastos = $query->orderBy('fecha_emision', 'desc')->get();
+        $perPage = (int) $request->get('per_page', 15);
+        $gastos = $query->orderBy('fecha_emision', 'desc')->paginate($perPage);
 
         // Añadir URL a las imágenes
-        $gastos->each(function ($gasto) {
+        $gastos->getCollection()->each(function ($gasto) {
             $gasto->imagenes->each(function ($imagen) {
                 $imagen->url = url('storage/' . $imagen->ruta);
             });

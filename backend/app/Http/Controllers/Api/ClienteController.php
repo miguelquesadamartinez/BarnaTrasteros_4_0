@@ -25,7 +25,8 @@ class ClienteController extends Controller
             });
         }
 
-        $clientes = $query->orderBy('apellido')->orderBy('nombre')->get();
+        $perPage = (int) $request->get('per_page', 15);
+        $clientes = $query->orderBy('apellido')->orderBy('nombre')->paginate($perPage);
 
         return response()->json($clientes);
     }

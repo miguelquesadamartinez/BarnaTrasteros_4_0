@@ -31,7 +31,16 @@ class PagoAlquilerController extends Controller
             $query->where('estado', $request->estado);
         }
 
-        $pagos = $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->get();
+        if ($request->has('anyo') && $request->anyo) {
+            $query->where('anyo', $request->anyo);
+        }
+
+        if ($request->has('mes') && $request->mes) {
+            $query->where('mes', $request->mes);
+        }
+
+        $perPage = (int) $request->get('per_page', 15);
+        $pagos = $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->paginate($perPage);
 
         return response()->json($pagos);
     }

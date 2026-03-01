@@ -10,7 +10,7 @@
       <div class="filters-bar">
         <div class="filter-item">
           <span class="filter-label">Tipo</span>
-          <select v-model="filters.tipo" class="form-control" @change="loadGastos">
+          <select v-model="filters.tipo" class="form-control" @change="loadGastos(1)">
             <option value="">Todos</option>
             <option value="agua">Agua</option>
             <option value="luz">Luz</option>
@@ -21,7 +21,7 @@
         </div>
         <div class="filter-item">
           <span class="filter-label">Estado</span>
-          <select v-model="filters.estado" class="form-control" @change="loadGastos">
+          <select v-model="filters.estado" class="form-control" @change="loadGastos(1)">
             <option value="">Todos</option>
             <option value="pendiente">Pendiente</option>
             <option value="parcial">Parcial</option>
@@ -90,6 +90,14 @@
           </tbody>
         </table>
       </div>
+      <AppPagination
+        :current-page="store.pagination.current_page"
+        :last-page="store.pagination.last_page"
+        :total="store.pagination.total"
+        :from="store.pagination.from"
+        :to="store.pagination.to"
+        @change="onPageChange"
+      />
     </div>
 
     <!-- Modal: Crear/Editar gasto -->
@@ -257,6 +265,7 @@ import { useGastosStore } from '@/stores/gastos'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
 import AppModal from '@/components/AppModal.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
@@ -270,6 +279,7 @@ function descargarReciboGasto(gasto, detalle) {
 }
 
 const filters = ref({ tipo: '', estado: '' })
+const currentPage = ref(1)
 const showForm = ref(false)
 const showPagoModal = ref(false)
 const showImagenesModal = ref(false)
@@ -324,16 +334,22 @@ const pisoOptions = computed(() =>
   pisosStore.pisos.map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
 )
 
-async function loadGastos() {
-  const params = {}
+async function loadGastos(page = currentPage.value) {
+  currentPage.value = page
+  const params = { page }
   if (filters.value.tipo) params.tipo = filters.value.tipo
   if (filters.value.estado) params.estado = filters.value.estado
   await store.fetchGastos(params)
 }
 
+function onPageChange(page) {
+  loadGastos(page)
+}
+
 function clearFilters() {
   filters.value = { tipo: '', estado: '' }
-  loadGastos()
+  currentPage.value = 1
+  loadGastos(1)
 }
 
 function openNew() {
@@ -391,7 +407,7 @@ async function saveGasto() {
       await store.createGasto(fd)
     }
     showForm.value = false
-    await loadGastos()
+    await loadGastos(currentPage.value)
   } catch (e) {
     formError.value = e.displayMessage || 'Error al guardar el gasto'
   } finally {
@@ -414,7 +430,7 @@ async function registrarPagoGasto() {
       generarReciboGasto(updatedGasto, ultimoDetalle)
     }
     showPagoModal.value = false
-    await loadGastos()
+    await loadGastos(currentPage.value)
   } catch (e) {
     pagoError.value = e.displayMessage || 'Error al registrar el pago'
   } finally {
@@ -434,7 +450,7 @@ async function subirImagenes() {
     const updated = await store.subirImagenes(imagenTarget.value.id, fd)
     imagenTarget.value = updated
     filesToUpload.value = []
-    await loadGastos()
+    await loadGastos(currentPage.value)
   } catch (e) {
     alert(e.displayMessage || 'Error al subir imágenes')
   } finally {
@@ -447,7 +463,7 @@ async function eliminarImg(imgId) {
   try {
     const updated = await store.eliminarImagen(imagenTarget.value.id, imgId)
     imagenTarget.value = updated
-    await loadGastos()
+    await loadGastos(currentPage.value)
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')
   }
@@ -458,7 +474,7 @@ async function doDelete() {
   try {
     await store.deleteGasto(toDelete.value.id)
     showDelete.value = false
-    await loadGastos()
+    await loadGastos(currentPage.value)
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')
   } finally {
@@ -467,7 +483,7 @@ async function doDelete() {
 }
 
 onMounted(() => {
-  loadGastos()
+  loadGastos(1)
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })

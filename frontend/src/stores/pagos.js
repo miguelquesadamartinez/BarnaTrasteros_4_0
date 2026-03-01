@@ -4,6 +4,7 @@ import api from '@/api'
 
 export const usePagosStore = defineStore('pagos', () => {
   const pagos = ref([])
+  const pagination = ref({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0, per_page: 15 })
   const loading = ref(false)
   const error = ref(null)
 
@@ -12,7 +13,15 @@ export const usePagosStore = defineStore('pagos', () => {
     error.value = null
     try {
       const { data } = await api.get('/pagos-alquiler', { params })
-      pagos.value = data
+      pagos.value = data.data
+      pagination.value = {
+        current_page: data.current_page,
+        last_page: data.last_page,
+        total: data.total,
+        from: data.from ?? 0,
+        to: data.to ?? 0,
+        per_page: data.per_page,
+      }
     } catch (e) {
       error.value = e.displayMessage || 'Error al cargar pagos'
     } finally {
@@ -43,5 +52,5 @@ export const usePagosStore = defineStore('pagos', () => {
     pagos.value = pagos.value.filter((p) => p.id !== id)
   }
 
-  return { pagos, loading, error, fetchPagos, crearPago, registrarPago, deletePago }
+  return { pagos, pagination, loading, error, fetchPagos, crearPago, registrarPago, deletePago }
 })

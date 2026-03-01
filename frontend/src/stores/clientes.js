@@ -4,16 +4,24 @@ import api from '@/api'
 
 export const useClientesStore = defineStore('clientes', () => {
   const clientes = ref([])
+  const pagination = ref({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0, per_page: 15 })
   const loading = ref(false)
   const error = ref(null)
 
-  async function fetchClientes(search = '') {
+  async function fetchClientes(params = {}) {
     loading.value = true
     error.value = null
     try {
-      const params = search ? { search } : {}
       const { data } = await api.get('/clientes', { params })
-      clientes.value = data
+      clientes.value = data.data
+      pagination.value = {
+        current_page: data.current_page,
+        last_page: data.last_page,
+        total: data.total,
+        from: data.from ?? 0,
+        to: data.to ?? 0,
+        per_page: data.per_page,
+      }
     } catch (e) {
       error.value = e.displayMessage || 'Error al cargar clientes'
     } finally {
@@ -45,5 +53,5 @@ export const useClientesStore = defineStore('clientes', () => {
     clientes.value = clientes.value.filter((c) => c.id !== id)
   }
 
-  return { clientes, loading, error, fetchClientes, createCliente, updateCliente, deleteCliente }
+  return { clientes, pagination, loading, error, fetchClientes, createCliente, updateCliente, deleteCliente }
 })
