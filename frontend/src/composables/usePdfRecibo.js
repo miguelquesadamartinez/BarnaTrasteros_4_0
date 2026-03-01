@@ -121,5 +121,56 @@ export function usePdfRecibo() {
     doc.save(`recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
 
-  return { generarReciboPago, generarReciboGasto }
+  /**
+   * Genera un recibo/factura del estado actual de un pago de alquiler
+   * sin necesitar un detalle concreto. Sirve para cualquier estado.
+   * @param {Object} pago - Objeto PagoAlquiler
+   */
+  function generarReciboPagoTotal(pago) {
+    const hoy = new Date().toLocaleDateString('es-ES')
+    const rows = [
+      ['Tipo de propiedad',  pago.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero'],
+      ['Referencia',         `${pago.tipo} #${pago.referencia_id}`],
+      ['Cliente',            pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : '—'],
+      ['Período',            `${MESES[pago.mes]} ${pago.anyo}`],
+      ['Importe total',      fmt(pago.importe_total)],
+      ['Total abonado',      fmt(pago.pagado)],
+      ['Pendiente',          fmt(Math.max(0, +pago.importe_total - +pago.pagado))],
+      ['Estado',             pago.estado],
+      ['Fecha emisión',      hoy],
+    ]
+    if (pago.notas) rows.push(['Notas', pago.notas])
+
+    const doc = buildPdf('RESUMEN DE ALQUILER', rows, pago.importe_total)
+    doc.save(`resumen_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
+  }
+
+  /**
+   * Genera un recibo/factura del estado actual de un gasto
+   * sin necesitar un detalle concreto. Sirve para cualquier estado.
+   * @param {Object} gasto - Objeto Gasto completo
+   */
+  function generarReciboGastoTotal(gasto) {
+    const hoy = new Date().toLocaleDateString('es-ES')
+    const rows = [
+      ['Tipo de gasto',   TIPOS_GASTO[gasto.tipo] || gasto.tipo],
+      ['Descripción',     gasto.descripcion],
+      ['Referencia',      gasto.referencia_tipo !== 'general'
+                            ? `${gasto.referencia_tipo} #${gasto.referencia_id}`
+                            : 'General'],
+      ['Fecha emisión',   fmtDate(gasto.fecha_emision)],
+      ['Vencimiento',     fmtDate(gasto.fecha_vencimiento)],
+      ['Importe total',   fmt(gasto.importe_total)],
+      ['Total abonado',   fmt(gasto.pagado)],
+      ['Pendiente',       fmt(Math.max(0, +gasto.importe_total - +gasto.pagado))],
+      ['Estado',          gasto.estado],
+      ['Fecha emisión doc', hoy],
+    ]
+    if (gasto.notas) rows.push(['Notas', gasto.notas])
+
+    const doc = buildPdf('RESUMEN DE GASTO', rows, gasto.importe_total)
+    doc.save(`resumen_gasto_${gasto.id}_${gasto.tipo}.pdf`)
+  }
+
+  return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal }
 }

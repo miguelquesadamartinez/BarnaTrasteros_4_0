@@ -73,6 +73,7 @@
               <td>
                 <div class="actions-cell">
                   <button v-if="g.estado !== 'pagado'" class="btn btn-success btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
+                  <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboGastoTotal(g)">📄</button>
                   <button class="btn btn-secondary btn-sm" title="Ver imágenes" @click="openImagenes(g)">🖼️</button>
                   <button class="btn btn-info btn-sm" title="Editar gasto" @click="openEdit(g)">✏️</button>
                   <button class="btn btn-danger btn-sm" title="Eliminar gasto" @click="confirmDelete(g)">🗑️</button>
@@ -272,7 +273,7 @@ import { usePdfRecibo } from '@/composables/usePdfRecibo'
 const store = useGastosStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
-const { generarReciboGasto } = usePdfRecibo()
+const { generarReciboGasto, generarReciboGastoTotal } = usePdfRecibo()
 
 function descargarReciboGasto(gasto, detalle) {
   generarReciboGasto(gasto, detalle)

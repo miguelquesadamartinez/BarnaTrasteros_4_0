@@ -84,6 +84,7 @@
                     @click="openPago(p)"
                   >💰 Pagar</button>
                   <button class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋 Ver</button>
+                  <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
                   <button class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
                 </div>
               </td>
@@ -254,7 +255,7 @@ const store = usePagosStore()
 const clientesStore = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
-const { generarReciboPago } = usePdfRecibo()
+const { generarReciboPago, generarReciboPagoTotal } = usePdfRecibo()
 
 function descargarReciboPago(pago, detalle) {
   generarReciboPago(pago, detalle)
