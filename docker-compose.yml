@@ -1,0 +1,149 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: barnatrasteros_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: barnatrasteros
+      MYSQL_USER: barnauser
+      MYSQL_PASSWORD: barnapass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "barnauser", "-pbarnapass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - barnatrasteros_net
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: barnatrasteros_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8080:80"
+    networks:
+      - barnatrasteros_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barnatrasteros_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:Y5EvpCxs0cVNJN2w6EBFosq9RQEQXssD3ny428HsVA4=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: barnatrasteros
+      DB_USERNAME: barnauser
+      DB_PASSWORD: barnapass
+      QUEUE_CONNECTION: database
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+      - ./backend/storage/app/public:/var/www/html/storage/app/public
+    networks:
+      - barnatrasteros_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: barnatrasteros_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - barnatrasteros_net
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barnatrasteros_scheduler
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: php artisan schedule:work
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:Y5EvpCxs0cVNJN2w6EBFosq9RQEQXssD3ny428HsVA4=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: barnatrasteros
+      DB_USERNAME: barnauser
+      DB_PASSWORD: barnapass
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    networks:
+      - barnatrasteros_net
+
+  queue_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barnatrasteros_queue
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: php artisan queue:work --sleep=3 --tries=3
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:Y5EvpCxs0cVNJN2w6EBFosq9RQEQXssD3ny428HsVA4=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: barnatrasteros
+      DB_USERNAME: barnauser
+      DB_PASSWORD: barnapass
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    networks:
+      - barnatrasteros_net
+
+volumes:
+  mysql_data:
+    driver: local
+  backend_vendor:
+    driver: local
+
+networks:
+  barnatrasteros_net:
+    driver: bridge

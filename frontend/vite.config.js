@@ -1,0 +1,29 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL
+          ? process.env.VITE_API_BASE_URL.replace('/api', '')
+          : 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+})
