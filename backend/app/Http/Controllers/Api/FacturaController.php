@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
-use App\Models\PagoAlquiler;
 use App\Models\Trastero;
 use App\Models\Piso;
 use Illuminate\Http\JsonResponse;

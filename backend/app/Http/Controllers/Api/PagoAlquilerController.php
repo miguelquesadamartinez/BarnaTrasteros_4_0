@@ -38,7 +38,12 @@ class PagoAlquilerController extends Controller
         }
 
         if ($request->has('estado') && $request->estado) {
-            $query->where('estado', $request->estado);
+            $estados = array_filter(array_map('trim', explode(',', $request->estado)));
+            if (count($estados) === 1) {
+                $query->where('estado', $estados[0]);
+            } else {
+                $query->whereIn('estado', $estados);
+            }
         }
 
         if ($request->has('anyo') && $request->anyo) {
