@@ -47,11 +47,6 @@ function drawHeader(doc, logoData) {
   doc.text('Telf: 696 412 959 - 93 352 2003', 12, 42)
   doc.text('www.barnatrasteros.com', 12, 45)
   doc.text('info@barnatrasteros.com', 12, 48)
-  doc.setTextColor(160, 160, 160)
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.text('BarnaTrasteros — Documento generado automáticamente', 105, 284, { align: 'center' })
-  doc.text(`Generado el ${hoy}`, 105, 289, { align: 'center' })
 }
 
 /**
@@ -85,7 +80,7 @@ async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total) {
   doc.setTextColor(120, 120, 120)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text('Referencia:', 12, y + 2)
+  //doc.text('Referencia:', 12, y + 2)
   doc.setDrawColor(220, 220, 220)
   doc.rect(12, y + 4, 85, 0.5, 'F')
   doc.setFont('helvetica', 'normal')
@@ -138,6 +133,10 @@ async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total) {
   doc.text('TOTAL:', 130, y)
   doc.text(fmt(total), 185, y, { align: 'right' })
 
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Impuestos y gastos comunes incluidos.', 12, y + 15)
+
   return doc
 }
 
@@ -152,8 +151,8 @@ export function usePdfRecibo() {
     const numDoc = `Nº ${detalle.id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
-      `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.numero ?? pago.referencia_id}`,
-      `Período: ${MESES[pago.mes]} ${pago.anyo}`,
+      `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`,
+      `Número identificación fiscal: ${pago.cliente.dni}`,
     ]
     if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
     const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
@@ -166,8 +165,7 @@ export function usePdfRecibo() {
     const infoRef = [
       `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
       gasto.descripcion,
-      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} #${gasto.referencia_id}` : 'General',
-      `Estado: ${gasto.estado}`,
+      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} ${gasto.referencia_id}` : 'General',
     ]
     const conceptoRows = [
       [gasto.descripcion, fmtDate(detalle.fecha_pago), detalle.importe],
@@ -177,19 +175,17 @@ export function usePdfRecibo() {
     doc.save(`recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
 
+  // eMiKi
   async function generarReciboPagoTotal(pago) {
     const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.numero ?? pago.referencia_id}`
+    const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
-      `Período: ${MESES[pago.mes]} ${pago.anyo}`,
-      `Estado: ${pago.estado}`,
+      `Número identificación fiscal: ${pago.cliente.dni}`,
     ]
     const pendiente = Math.max(0, +pago.importe_total - +pago.pagado)
     const conceptoRows = [
-      ['Alquiler mensual', `${MESES[pago.mes]} ${pago.anyo}`, pago.importe_total],
-      ['Total abonado',    hoy,                                 pago.pagado],
-      ['Pendiente',        '',                                  pendiente],
+      [`Arrendamiento ${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`, `${MESES[pago.mes]} ${pago.anyo}`, pago.importe_total],
     ]
     if (pago.notas) conceptoRows.push(['Notas', pago.notas, ''])
     const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, pago.importe_total)
@@ -198,18 +194,16 @@ export function usePdfRecibo() {
 
   async function generarReciboGastoTotal(gasto) {
     const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const numDoc = `Gasto #${gasto.id}`
+    const numDoc = `Gasto ${gasto.id}`
     const infoRef = [
       `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
       gasto.descripcion,
-      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} #${gasto.referencia_id}` : 'General',
+      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} ${gasto.referencia_id}` : 'General',
       `Estado: ${gasto.estado}`,
     ]
     const pendiente = Math.max(0, +gasto.importe_total - +gasto.pagado)
     const conceptoRows = [
       [gasto.descripcion,   `Emisión: ${fmtDate(gasto.fecha_emision)}`,      gasto.importe_total],
-      ['Total abonado',     `Vence: ${fmtDate(gasto.fecha_vencimiento)}`,     gasto.pagado],
-      ['Pendiente',         '',                                                pendiente],
     ]
     if (gasto.notas) conceptoRows.push(['Notas', gasto.notas, ''])
     const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, gasto.importe_total)
@@ -228,7 +222,7 @@ export function usePdfRecibo() {
   async function generarFacturaCliente(factura, mes, anyo) {
     const { cliente, pagos, importe_total, total_pagado } = factura
     const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const numFactura = `${anyo} - ${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
+    const numFactura = `${anyo}-${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
 
     // Cargar logo JPG desde la API del backend (con CORS)
     let logoData = null

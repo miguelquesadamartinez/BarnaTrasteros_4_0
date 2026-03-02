@@ -46,7 +46,7 @@
           class="factura-card"
         >
           <div class="factura-card-header">
-            <div class="factura-card-num">Factura #{{ String(f.cliente.id).padStart(4, '0') }}/{{ anyo }}</div>
+            <div class="factura-card-num">Factura {{ anyo }}-{{ String(mes).padStart(2,'0') }}-{{ String(f.cliente.id).padStart(4, '0') }}</div>
             <span class="badge" :class="estadoClass(f)">{{ estadoLabel(f) }}</span>
           </div>
           <div class="factura-card-body">
