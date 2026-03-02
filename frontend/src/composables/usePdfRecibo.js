@@ -10,92 +10,133 @@ function fmtDate(v) {
   return v ? v.split('T')[0] : '—'
 }
 
-async function buildPdf(titulo, rows, importeDetalle) {
-  const doc = new jsPDF()
-
-  // eMiKi
-   let logoData = null
-    try {
-      const backendBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-      const response = await fetch(`${backendBase}/logo`)
-      if (response.ok) {
-        const blob = await response.blob()
-        logoData = await new Promise((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result)
-          reader.onerror = () => resolve(null)
-          reader.readAsDataURL(blob)
-        })
-      }
-    } catch (e) {
-      console.warn('No se pudo cargar el logo:', e)
+async function loadLogo() {
+  try {
+    const backendBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const response = await fetch(`${backendBase}/logo`)
+    if (response.ok) {
+      const blob = await response.blob()
+      return await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = () => resolve(null)
+        reader.readAsDataURL(blob)
+      })
     }
+  } catch (e) {
+    console.warn('No se pudo cargar el logo:', e)
+  }
+  return null
+}
 
-    // Cabecera roja
-    doc.setFillColor(252, 193, 5)
-    doc.rect(0, 0, 210, 5, 'F')
-
-    doc.setFillColor(248, 248, 248)
-    doc.rect(0, 5, 210, 46, 'F')
-    
-    // Texto de empresa siempre visible
-    // Logo encima del texto si se cargó
-    if (logoData) {
-      doc.addImage(logoData, 'JPEG', 12,8, 35, 14)
-    }
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    doc.text('C/ Velia, 81 - 08016 - Barcelona', 12, 26)
-    doc.text('Miguel Quesada Cantos', 12, 32)
-    doc.text('DNI 36945618M', 12, 36)
-
-    doc.text('Telf: 696 412 959 - 93 352 2003', 12, 42)
-    doc.text('www.barnatrasteros.com', 12, 45)
-    doc.text('info@barnatrasteros.com', 12, 48)
-
-  // ── Título del recibo ──────────────────────────────────────
-  doc.setTextColor(25, 55, 110)
-  doc.setFontSize(15)
+function drawHeader(doc, logoData) {
+  const hoy = new Date().toLocaleDateString('es-ES')
+  doc.setFillColor(252, 193, 5)
+  doc.rect(0, 0, 210, 5, 'F')
+  doc.setFillColor(248, 248, 248)
+  doc.rect(0, 5, 210, 46, 'F')
+  if (logoData) {
+    doc.addImage(logoData, 'JPEG', 12, 8, 35, 14)
+  }
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text(titulo, 105, 47, { align: 'center' })
-  doc.setDrawColor(25, 55, 110)
-  doc.setLineWidth(0.5)
-  doc.line(15, 51, 195, 51)
-
-  // ── Tabla de datos ─────────────────────────────────────────
-  let y = 63
-  const ROW_H = 9
-
-  rows.forEach(([label, value], i) => {
-    const par = i % 2 === 0
-    doc.setFillColor(par ? 243 : 255, par ? 246 : 255, par ? 253 : 255)
-    doc.rect(15, y - 6.5, 180, ROW_H, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(80, 80, 80)
-    doc.setFontSize(10)
-    doc.text(label, 18, y)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(20, 20, 20)
-    doc.text(String(value ?? '—'), 95, y)
-    y += ROW_H
-  })
-
-  // ── Caja de importe total ──────────────────────────────────
-  y += 8
-  doc.setFillColor(25, 55, 110)
-  doc.roundedRect(120, y, 75, 16, 3, 3, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.text(`IMPORTE: ${fmt(importeDetalle)}`, 157.5, y + 10, { align: 'center' })
-
-  // ── Pie de página ──────────────────────────────────────────
+  doc.text('C/ Velia, 81 - 08016 - Barcelona', 12, 26)
+  doc.text('Miguel Quesada Cantos', 12, 32)
+  doc.text('DNI 36945618M', 12, 36)
+  doc.text('Telf: 696 412 959 - 93 352 2003', 12, 42)
+  doc.text('www.barnatrasteros.com', 12, 45)
+  doc.text('info@barnatrasteros.com', 12, 48)
   doc.setTextColor(160, 160, 160)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.text('BarnaTrasteros — Documento generado automáticamente', 105, 284, { align: 'center' })
-  doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')}`, 105, 289, { align: 'center' })
+  doc.text(`Generado el ${hoy}`, 105, 289, { align: 'center' })
+}
+
+/**
+ * Genera un recibo en formato tabla (igual que facturas, sin IVA).
+ * @param {string}   titulo       - Título del documento (ej: 'RECIBO DE PAGO')
+ * @param {string}   numDoc       - Número/referencia del documento
+ * @param {string}   hoy          - Fecha de emisión
+ * @param {string[]} infoRef      - Líneas de info de referencia (izquierda)
+ * @param {Array[]}  conceptoRows - Array de [concepto, detalle, importe]
+ * @param {number}   total        - Total a mostrar en la caja final
+ */
+async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total) {
+  const logoData = await loadLogo()
+  const doc = new jsPDF()
+
+  drawHeader(doc, logoData)
+
+  // Título y número a la derecha
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.text(titulo, 195, 15, { align: 'right' })
+  doc.setFontSize(10)
+  doc.text(numDoc, 195, 23, { align: 'right' })
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Emitido: ${hoy}`, 195, 30, { align: 'right' })
+
+  // Sección de referencia / cliente
+  let y = 55
+  doc.setTextColor(120, 120, 120)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Referencia:', 12, y + 2)
+  doc.setDrawColor(220, 220, 220)
+  doc.rect(12, y + 4, 85, 0.5, 'F')
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(30, 30, 30)
+  doc.setFontSize(9)
+  infoRef.forEach((line, i) => {
+    if (line) doc.text(line, 12, y + 10 + i * 6)
+  })
+
+  // Cabecera tabla conceptos
+  y = 90
+  doc.setFillColor(252, 193, 5)
+  doc.rect(12, y, 185, 9, 'F')
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Concepto', 18, y + 6.5)
+  doc.text('Detalle', 100, y + 6.5)
+  doc.text('Importe', 185, y + 6.5, { align: 'right' })
+
+  // Filas de conceptos
+  y += 9
+  const ROW = 9
+  conceptoRows.forEach(([concepto, detalle, importe], i) => {
+    doc.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255)
+    doc.rect(12, y, 185, ROW, 'F')
+    doc.setDrawColor(230, 230, 230)
+    doc.line(12, y + ROW, 197, y + ROW)
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text(String(concepto ?? '—'), 18, y + 6)
+    doc.text(String(detalle ?? '—'), 100, y + 6)
+    doc.setFont('helvetica', 'bold')
+    doc.text(fmt(importe), 185, y + 6, { align: 'right' })
+    y += ROW
+  })
+
+  // Caja total
+  y += 6
+  doc.setDrawColor(252, 193, 5)
+  doc.setLineWidth(0.5)
+  doc.line(120, y, 197, y)
+  y += 5
+  doc.setFillColor(252, 193, 5)
+  doc.rect(118, y - 6, 79, 10, 'F')
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('TOTAL:', 130, y)
+  doc.text(fmt(total), 185, y, { align: 'right' })
 
   return doc
 }
@@ -107,99 +148,76 @@ export function usePdfRecibo() {
    * @param {Object} detalle    - Objeto DetallePagoAlquiler (importe, fecha_pago, notas)
    */
   async function generarReciboPago(pago, detalle) {
-    const rows = [
-      ['Nº Recibo',          `#${detalle.id}`],
-      ['Tipo de propiedad',  pago.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero'],
-      ['Referencia',         `${pago.tipo} #${pago.referencia_id}`],
-      ['Cliente',            pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : '—'],
-      ['Período',            `${MESES[pago.mes]} ${pago.anyo}`],
-      ['Fecha de pago',      fmtDate(detalle.fecha_pago)],
-      ['Importe pagado',     fmt(detalle.importe)],
-      ['Importe total mes',  fmt(pago.importe_total)],
-      ['Total abonado',      fmt(pago.pagado)],
-      ['Estado',             pago.estado],
+    const hoy = new Date().toLocaleDateString('es-ES')
+    const numDoc = `Nº ${detalle.id}`
+    const infoRef = [
+      pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
+      `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.referencia_id}`,
+      `Período: ${MESES[pago.mes]} ${pago.anyo}`,
+      `Estado: ${pago.estado}`,
     ]
-    if (detalle.notas) rows.push(['Notas', detalle.notas])
-
-    const doc = await buildPdf('RECIBO DE PAGO DE ALQUILER', rows, detalle.importe)
+    const conceptoRows = [
+      ['Pago de alquiler', fmtDate(detalle.fecha_pago), detalle.importe],
+    ]
+    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
+    const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
     doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}_id${detalle.id}.pdf`)
   }
 
-  /**
-   * Genera y descarga el recibo de un pago de gasto.
-   * @param {Object} gasto   - Objeto Gasto completo
-   * @param {Object} detalle - Objeto DetalleGasto (importe, fecha_pago, notas)
-   */
   async function generarReciboGasto(gasto, detalle) {
-    const rows = [
-      ['Nº Recibo',       `#${detalle.id}`],
-      ['Tipo de gasto',   TIPOS_GASTO[gasto.tipo] || gasto.tipo],
-      ['Descripción',     gasto.descripcion],
-      ['Referencia',      gasto.referencia_tipo !== 'general'
-                            ? `${gasto.referencia_tipo} #${gasto.referencia_id}`
-                            : 'General'],
-      ['Fecha emisión',   fmtDate(gasto.fecha_emision)],
-      ['Fecha de pago',   fmtDate(detalle.fecha_pago)],
-      ['Importe pagado',  fmt(detalle.importe)],
-      ['Total gasto',     fmt(gasto.importe_total)],
-      ['Total abonado',   fmt(gasto.pagado)],
-      ['Estado',          gasto.estado],
+    const hoy = new Date().toLocaleDateString('es-ES')
+    const numDoc = `Nº ${detalle.id}`
+    const infoRef = [
+      `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
+      gasto.descripcion,
+      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} #${gasto.referencia_id}` : 'General',
+      `Estado: ${gasto.estado}`,
     ]
-    if (detalle.notas) rows.push(['Notas', detalle.notas])
-
-    const doc = await buildPdf('RECIBO DE PAGO DE GASTO', rows, detalle.importe)
+    const conceptoRows = [
+      [gasto.descripcion, fmtDate(detalle.fecha_pago), detalle.importe],
+    ]
+    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
+    const doc = await buildPdf('RECIBO DE GASTO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
     doc.save(`recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
 
-  /**
-   * Genera un recibo/factura del estado actual de un pago de alquiler
-   * sin necesitar un detalle concreto. Sirve para cualquier estado.
-   * @param {Object} pago - Objeto PagoAlquiler
-   */
   async function generarReciboPagoTotal(pago) {
     const hoy = new Date().toLocaleDateString('es-ES')
-    const rows = [
-      ['Tipo de propiedad',  pago.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero'],
-      ['Referencia',         `${pago.tipo} #${pago.referencia_id}`],
-      ['Cliente',            pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : '—'],
-      ['Período',            `${MESES[pago.mes]} ${pago.anyo}`],
-      ['Importe total',      fmt(pago.importe_total)],
-      ['Total abonado',      fmt(pago.pagado)],
-      ['Pendiente',          fmt(Math.max(0, +pago.importe_total - +pago.pagado))],
-      ['Estado',             pago.estado],
-      ['Fecha emisión',      hoy],
+    const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.referencia_id}`
+    const infoRef = [
+      pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
+      `Período: ${MESES[pago.mes]} ${pago.anyo}`,
+      `Estado: ${pago.estado}`,
     ]
-    if (pago.notas) rows.push(['Notas', pago.notas])
-
-    const doc = await buildPdf('RESUMEN DE ALQUILER', rows, pago.importe_total)
-    doc.save(`resumen_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
+    const pendiente = Math.max(0, +pago.importe_total - +pago.pagado)
+    const conceptoRows = [
+      ['Alquiler mensual', `${MESES[pago.mes]} ${pago.anyo}`, pago.importe_total],
+      ['Total abonado',    hoy,                                 pago.pagado],
+      ['Pendiente',        '',                                  pendiente],
+    ]
+    if (pago.notas) conceptoRows.push(['Notas', pago.notas, ''])
+    const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, pago.importe_total)
+    doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
   }
 
-  /**
-   * Genera un recibo/factura del estado actual de un gasto
-   * sin necesitar un detalle concreto. Sirve para cualquier estado.
-   * @param {Object} gasto - Objeto Gasto completo
-   */
   async function generarReciboGastoTotal(gasto) {
     const hoy = new Date().toLocaleDateString('es-ES')
-    const rows = [
-      ['Tipo de gasto',   TIPOS_GASTO[gasto.tipo] || gasto.tipo],
-      ['Descripción',     gasto.descripcion],
-      ['Referencia',      gasto.referencia_tipo !== 'general'
-                            ? `${gasto.referencia_tipo} #${gasto.referencia_id}`
-                            : 'General'],
-      ['Fecha emisión',   fmtDate(gasto.fecha_emision)],
-      ['Vencimiento',     fmtDate(gasto.fecha_vencimiento)],
-      ['Importe total',   fmt(gasto.importe_total)],
-      ['Total abonado',   fmt(gasto.pagado)],
-      ['Pendiente',       fmt(Math.max(0, +gasto.importe_total - +gasto.pagado))],
-      ['Estado',          gasto.estado],
-      ['Fecha emisión doc', hoy],
+    const numDoc = `Gasto #${gasto.id}`
+    const infoRef = [
+      `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
+      gasto.descripcion,
+      gasto.referencia_tipo !== 'general' ? `${gasto.referencia_tipo} #${gasto.referencia_id}` : 'General',
+      `Estado: ${gasto.estado}`,
     ]
-    if (gasto.notas) rows.push(['Notas', gasto.notas])
-
-    const doc = await buildPdf('RESUMEN DE GASTO', rows, gasto.importe_total)
-    doc.save(`resumen_gasto_${gasto.id}_${gasto.tipo}.pdf`)
+    const pendiente = Math.max(0, +gasto.importe_total - +gasto.pagado)
+    const conceptoRows = [
+      [gasto.descripcion,   `Emisión: ${fmtDate(gasto.fecha_emision)}`,      gasto.importe_total],
+      ['Total abonado',     `Vence: ${fmtDate(gasto.fecha_vencimiento)}`,     gasto.pagado],
+      ['Pendiente',         '',                                                pendiente],
+    ]
+    if (gasto.notas) conceptoRows.push(['Notas', gasto.notas, ''])
+    const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, gasto.importe_total)
+    doc.save(`recibo_gasto_${gasto.id}_${gasto.tipo}.pdf`)
   }
 
   /**
