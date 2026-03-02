@@ -14,6 +14,7 @@ class PagoAlquiler extends Model
         'cliente_id',
         'tipo',
         'referencia_id',
+        'numero',
         'mes',
         'anyo',
         'importe_total',

@@ -130,7 +130,7 @@
     <!-- Modal: Registrar Pago -->
     <AppModal v-model="showPagoModal" title="Registrar Pago" size="md">
       <div v-if="pagoTarget" class="mb-2">
-        <p><strong>Tipo:</strong> {{ pagoTarget.tipo }} | <strong>Ref:</strong> {{ pagoTarget.referencia_id }}</p>
+        <p><strong>Tipo:</strong> {{ pagoTarget.tipo }} | <strong>Ref:</strong> {{ pagoTarget.numero ?? pagoTarget.referencia_id }}</p>
         <p><strong>Cliente:</strong> {{ pagoTarget.cliente?.nombre }} {{ pagoTarget.cliente?.apellido }}</p>
         <p class="text-muted" style="font-size:.85rem">El pago se distribuirá automáticamente entre los meses más antiguos con deuda.</p>
       </div>
@@ -161,7 +161,7 @@
     <!-- Modal: Detalle de pagos -->
     <AppModal v-model="showDetalle" title="Detalle de Pagos" size="lg">
       <div v-if="detalleTarget">
-        <p><strong>{{ detalleTarget.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero' }}</strong> — Ref: {{ detalleTarget.referencia_id }}</p>
+        <p><strong>{{ detalleTarget.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero' }}</strong> — Ref: {{ detalleTarget.numero ?? detalleTarget.referencia_id }}</p>
         <p>{{ mesNombre(detalleTarget.mes) }} {{ detalleTarget.anyo }} | {{ detalleTarget.cliente?.nombre }} {{ detalleTarget.cliente?.apellido }}</p>
         <div class="detail-table-wrapper">
           <table>

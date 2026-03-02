@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('cliente_id')->constrained('clientes')->cascadeOnDelete();
             $table->enum('tipo', ['trastero', 'piso']);
             $table->unsignedBigInteger('referencia_id'); // ID del trastero o piso
+            $table->string('numero', 20)->nullable();    // Número del trastero o piso
             $table->tinyInteger('mes'); // 1-12
             $table->year('anyo');
             $table->decimal('importe_total', 8, 2);

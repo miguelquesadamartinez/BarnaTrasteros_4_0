@@ -167,6 +167,13 @@ class PagoAlquilerController extends Controller
             return response()->json(['error' => 'Ya existe un registro de pago para ese mes/año'], 422);
         }
 
+        // Resolver numero del trastero o piso
+        if ($validated['tipo'] === 'trastero') {
+            $validated['numero'] = \App\Models\Trastero::find($validated['referencia_id'])?->numero;
+        } else {
+            $validated['numero'] = \App\Models\Piso::find($validated['referencia_id'])?->numero;
+        }
+
         $validated['pagado'] = 0;
         $validated['estado'] = 'pendiente';
 

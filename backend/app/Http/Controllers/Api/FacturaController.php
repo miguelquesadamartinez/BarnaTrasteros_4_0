@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
-use App\Models\Trastero;
-use App\Models\Piso;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,11 +35,7 @@ class FacturaController extends Controller
             ->map(function ($cliente) {
                 $pagos = $cliente->pagosAlquiler->map(function ($pago) {
                     $data = $pago->toArray();
-                    if ($pago->tipo === 'trastero') {
-                        $data['numero'] = Trastero::find($pago->referencia_id)?->numero ?? $pago->referencia_id;
-                    } else {
-                        $data['numero'] = Piso::find($pago->referencia_id)?->numero ?? $pago->referencia_id;
-                    }
+                    // numero ya viene de la columna de la tabla
                     return $data;
                 });
                 return [

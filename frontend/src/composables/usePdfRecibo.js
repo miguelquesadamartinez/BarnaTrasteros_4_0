@@ -152,12 +152,8 @@ export function usePdfRecibo() {
     const numDoc = `Nº ${detalle.id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
-      `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.referencia_id}`,
+      `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.numero ?? pago.referencia_id}`,
       `Período: ${MESES[pago.mes]} ${pago.anyo}`,
-      `Estado: ${pago.estado}`,
-    ]
-    const conceptoRows = [
-      ['Pago de alquiler', fmtDate(detalle.fecha_pago), detalle.importe],
     ]
     if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
     const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
@@ -183,7 +179,7 @@ export function usePdfRecibo() {
 
   async function generarReciboPagoTotal(pago) {
     const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.referencia_id}`
+    const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.numero ?? pago.referencia_id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
       `Período: ${MESES[pago.mes]} ${pago.anyo}`,

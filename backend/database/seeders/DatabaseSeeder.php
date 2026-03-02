@@ -68,17 +68,18 @@ class DatabaseSeeder extends Seeder
         // TRASTEROS (12 ocupados — clientes 1–12, 3 libres)
         // ============================================================
         $tamanyos  = ['Pequeño (5m²)', 'Mediano (10m²)', 'Grande (20m²)', 'Extra (30m²)'];
-        $pisosTras = ['Planta Baja', 'Sótano', 'Sótano 2', 'Primera Planta'];
+        $pisosTras = ['Planta Baja', 'Sótano'];
         $precios   = [60.00, 90.00, 150.00, 200.00];
         $trasteros = [];
         for ($i = 1; $i <= 15; $i++) {
             $idx         = ($i - 1) % 4;
+            $pisoIdx     = ($i - 1) % 2;
             $clienteId   = $i <= 12 ? $i : null;
             $fechaInicio = $clienteId ? Carbon::now()->subMonths(rand(6, 24))->format('Y-m-d') : null;
             $trasteros[] = [
                 'id'                    => $i,
                 'numero'                => 'T-' . str_pad($i, 2, '0', STR_PAD_LEFT),
-                'piso'                  => $pisosTras[$idx],
+                'piso'                  => $pisosTras[$pisoIdx],
                 'tamanyo'               => $tamanyos[$idx],
                 'precio_mensual'        => $precios[$idx],
                 'cliente_id'            => $clienteId,
@@ -139,6 +140,7 @@ class DatabaseSeeder extends Seeder
                     'cliente_id'    => $clienteId,
                     'tipo'          => 'trastero',
                     'referencia_id' => $t,
+                    'numero'        => 'T-' . str_pad($t, 2, '0', STR_PAD_LEFT),
                     'mes'           => $m['mes'],
                     'anyo'          => $m['anyo'],
                     'importe_total' => $precio,
@@ -157,6 +159,7 @@ class DatabaseSeeder extends Seeder
 
         // Pisos ocupados (clientes 13-15, pisos 1-3)
         $preciosPisos = [800.00, 750.00, 850.00];
+        $pisoNumeros  = ['P-1A', 'P-1B', 'P-2A'];
         for ($p = 1; $p <= 3; $p++) {
             $clienteId = 12 + $p;
             $precio    = $preciosPisos[$p - 1];
@@ -168,6 +171,7 @@ class DatabaseSeeder extends Seeder
                     'cliente_id'    => $clienteId,
                     'tipo'          => 'piso',
                     'referencia_id' => $p,
+                    'numero'        => $pisoNumeros[$p - 1],
                     'mes'           => $m['mes'],
                     'anyo'          => $m['anyo'],
                     'importe_total' => $precio,

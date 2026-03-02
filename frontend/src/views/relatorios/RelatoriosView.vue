@@ -327,13 +327,7 @@ function formatMoney(v) {
 function pendiente(p) { return Math.max(0, +p.importe_total - +p.pagado) }
 
 function refNumero(p) {
-  if (p.tipo === 'trastero') {
-    return trasteros.value.lista?.find(t => t.id === p.referencia_id)?.numero ?? p.referencia_id
-  }
-  if (p.tipo === 'piso') {
-    return pisos.value.lista?.find(pi => pi.id === p.referencia_id)?.numero ?? p.referencia_id
-  }
-  return p.referencia_id
+  return p.numero ?? p.referencia_id
 }
 
 function estadoBadge(e) {
