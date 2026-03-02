@@ -30,7 +30,7 @@ async function loadLogo() {
 }
 
 function drawHeader(doc, logoData) {
-  const hoy = new Date().toLocaleDateString('es-ES')
+  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
   doc.setFillColor(252, 193, 5)
   doc.rect(0, 0, 210, 5, 'F')
   doc.setFillColor(248, 248, 248)
@@ -148,7 +148,7 @@ export function usePdfRecibo() {
    * @param {Object} detalle    - Objeto DetallePagoAlquiler (importe, fecha_pago, notas)
    */
   async function generarReciboPago(pago, detalle) {
-    const hoy = new Date().toLocaleDateString('es-ES')
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const numDoc = `Nº ${detalle.id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
@@ -165,7 +165,7 @@ export function usePdfRecibo() {
   }
 
   async function generarReciboGasto(gasto, detalle) {
-    const hoy = new Date().toLocaleDateString('es-ES')
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const numDoc = `Nº ${detalle.id}`
     const infoRef = [
       `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
@@ -182,7 +182,7 @@ export function usePdfRecibo() {
   }
 
   async function generarReciboPagoTotal(pago) {
-    const hoy = new Date().toLocaleDateString('es-ES')
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const numDoc = `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} #${pago.referencia_id}`
     const infoRef = [
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
@@ -201,7 +201,7 @@ export function usePdfRecibo() {
   }
 
   async function generarReciboGastoTotal(gasto) {
-    const hoy = new Date().toLocaleDateString('es-ES')
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const numDoc = `Gasto #${gasto.id}`
     const infoRef = [
       `Tipo: ${TIPOS_GASTO[gasto.tipo] || gasto.tipo}`,
@@ -231,7 +231,7 @@ export function usePdfRecibo() {
 
   async function generarFacturaCliente(factura, mes, anyo) {
     const { cliente, pagos, importe_total, total_pagado } = factura
-    const hoy = new Date().toLocaleDateString('es-ES')
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const numFactura = `${anyo} - ${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
 
     // Cargar logo JPG desde la API del backend (con CORS)
@@ -377,14 +377,7 @@ export function usePdfRecibo() {
       y += 8
     })
 
-    // Pie
-    doc.setTextColor(160, 160, 160)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.text('BarnaTrasteros — Documento generado automáticamente', 105, 284, { align: 'center' })
-    doc.text(`Generado el ${hoy}`, 105, 289, { align: 'center' })
-
-    doc.save(`${numFactura}_${cliente.apellido.replace(/\s+/g,'_')}.pdf`)
+    doc.save(`Factura ${numFactura}_${cliente.apellido.replace(/\s+/g,'_')}.pdf`)
   }
 
   return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal, generarFacturaCliente }
