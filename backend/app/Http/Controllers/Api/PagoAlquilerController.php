@@ -176,4 +176,30 @@ class PagoAlquilerController extends Controller
 
         return response()->json(['message' => 'Registro de pago eliminado']);
     }
+
+    /**
+     * Elimina un detalle de pago y recalcula el registro principal (pagado + estado).
+     */
+    public function eliminarDetalle(PagoAlquiler $pagoAlquiler, DetallePagoAlquiler $detalle): JsonResponse
+    {
+        if ($detalle->pago_alquiler_id !== $pagoAlquiler->id) {
+            return response()->json(['error' => 'El detalle no pertenece a este pago.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $detalle->delete();
+
+            // Recalcular pagado sumando los detalles restantes
+            $pagoAlquiler->pagado = $pagoAlquiler->detalles()->sum('importe');
+            $pagoAlquiler->recalcularEstado(); // guarda internamente
+
+            DB::commit();
+
+            return response()->json($pagoAlquiler->fresh(['cliente', 'detalles']));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al eliminar el detalle: ' . $e->getMessage()], 500);
+        }
+    }
 }

@@ -100,11 +100,11 @@
             </tr>
             <!-- Totales -->
             <tr class="totals-row" v-if="store.pagos.length > 0">
-              <td colspan="4" class="text-right"><strong>Totales:</strong></td>
+              <td colspan="3" class="text-right"><strong>Totales:</strong></td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + +p.importe_total, 0)) }}</td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + +p.pagado, 0)) }}</td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + pendiente(p), 0)) }}</td>
-              <td colspan="2"></td>
+              <td colspan="3"></td>
             </tr>
           </tbody>
         </table>
@@ -163,11 +163,12 @@
                 <th>Importe</th>
                 <th>Notas</th>
                 <th>Recibo</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!detalleTarget.detalles?.length">
-                <td colspan="4" class="text-center text-muted">Sin pagos registrados</td>
+                <td colspan="5" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
                 <td>{{ formatDate(d.fecha_pago) }}</td>
@@ -180,10 +181,26 @@
                     @click="descargarReciboPago(detalleTarget, d)"
                   >📄 PDF</button>
                 </td>
+                <td>
+                  <button
+                    v-if="deleteDetalleId !== d.id"
+                    class="btn btn-danger btn-sm"
+                    title="Eliminar este detalle"
+                    @click="deleteDetalleId = d.id"
+                  >🗑️</button>
+                  <span v-else style="display:inline-flex;gap:.35rem;align-items:center">
+                    <span style="font-size:.8rem;color:#b00">¿Seguro?</span>
+                    <button class="btn btn-danger btn-sm" :disabled="deletingDetalle" @click="doEliminarDetalle(d)">
+                      {{ deletingDetalle ? '...' : '✓' }}
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @click="deleteDetalleId = null">✕</button>
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <div v-if="detalleError" class="alert alert-danger" style="margin-top:.75rem">{{ detalleError }}</div>
       </div>
     </AppModal>
 
@@ -259,6 +276,7 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+import api from '@/api'
 
 const store = usePagosStore()
 const clientesStore = useClientesStore()
@@ -278,6 +296,9 @@ const showNewModal = ref(false)
 const showDelete = ref(false)
 const pagoTarget = ref(null)
 const detalleTarget = ref(null)
+const deleteDetalleId = ref(null)
+const deletingDetalle = ref(false)
+const detalleError = ref('')
 const toDelete = ref(null)
 const pagando = ref(false)
 const saving = ref(false)
@@ -368,7 +389,27 @@ function openPago(p) {
 
 function openDetalle(p) {
   detalleTarget.value = p
+  deleteDetalleId.value = null
+  detalleError.value = ''
   showDetalle.value = true
+}
+
+async function doEliminarDetalle(detalle) {
+  deletingDetalle.value = true
+  detalleError.value = ''
+  try {
+    const { data } = await api.delete(`/pagos-alquiler/${detalleTarget.value.id}/detalles/${detalle.id}`)
+    // Actualizar detalleTarget en el modal con la respuesta del servidor
+    detalleTarget.value = data
+    // Actualizar también la fila en la tabla principal
+    const idx = store.pagos.findIndex((p) => p.id === data.id)
+    if (idx !== -1) store.pagos[idx] = data
+    deleteDetalleId.value = null
+  } catch (e) {
+    detalleError.value = e.response?.data?.error || 'Error al eliminar el detalle'
+  } finally {
+    deletingDetalle.value = false
+  }
 }
 
 function openNewPago() {
