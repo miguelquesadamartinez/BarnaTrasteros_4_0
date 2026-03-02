@@ -10,9 +10,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Desactivar restricciones de clave foránea durante el seeding
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
         DB::table('detalle_pagos_alquiler')->truncate();
         DB::table('pagos_alquiler')->truncate();
         DB::table('imagenes_gastos')->truncate();
@@ -22,129 +20,243 @@ class DatabaseSeeder extends Seeder
         DB::table('pisos')->truncate();
         DB::table('clientes')->truncate();
         DB::table('tamanyo_trasteros')->truncate();
-
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // ============================================================
         // TAMAÑOS DE TRASTEROS
         // ============================================================
         DB::table('tamanyo_trasteros')->insert([
-            ['nombre' => 'Pequeño (5m²)',   'descripcion' => 'Hasta 5 m²',          'orden' => 1, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Mediano (10m²)',  'descripcion' => 'Entre 5 y 10 m²',     'orden' => 2, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Grande (20m²)',   'descripcion' => 'Entre 10 y 20 m²',    'orden' => 3, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Extra (30m²)',    'descripcion' => 'Más de 20 m²',        'orden' => 4, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['nombre' => 'Pequeño (5m²)',  'descripcion' => 'Hasta 5 m²',       'orden' => 1, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['nombre' => 'Mediano (10m²)', 'descripcion' => 'Entre 5 y 10 m²',  'orden' => 2, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['nombre' => 'Grande (20m²)',  'descripcion' => 'Entre 10 y 20 m²', 'orden' => 3, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['nombre' => 'Extra (30m²)',   'descripcion' => 'Más de 20 m²',     'orden' => 4, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ============================================================
-        // CLIENTES
+        // 20 CLIENTES
         // ============================================================
-        DB::table('clientes')->insert([
-            ['id' => 1, 'nombre' => 'María',  'apellido' => 'García López',     'telefono' => '612345678', 'dni' => '12345678A', 'foto_dni' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'nombre' => 'Juan',   'apellido' => 'Martínez Ruiz',    'telefono' => '623456789', 'dni' => '23456789B', 'foto_dni' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 3, 'nombre' => 'Ana',    'apellido' => 'Fernández Torres', 'telefono' => '634567890', 'dni' => '34567890C', 'foto_dni' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 4, 'nombre' => 'Pedro',  'apellido' => 'Sánchez Morales',  'telefono' => '645678901', 'dni' => '45678901D', 'foto_dni' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 5, 'nombre' => 'Laura',  'apellido' => 'López Jiménez',    'telefono' => '656789012', 'dni' => '56789012E', 'foto_dni' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-        ]);
+        // Columnas: id, nombre, apellido, telefono, dni, direccion, cp, ciudad, necesita_factura
+        $clientesData = [
+            [1,  'María',    'García López',       '612100001', '11111111A', 'Carrer de Mallorca, 123',   '08013', 'Barcelona',   true],
+            [2,  'Juan',     'Martínez Ruiz',      '612100002', '22222222B', 'Avinguda Diagonal, 456',    '08036', 'Barcelona',   true],
+            [3,  'Ana',      'Fernández Torres',   '612100003', '33333333C', 'Carrer de Provença, 78',    '08009', 'Barcelona',   false],
+            [4,  'Pedro',    'Sánchez Morales',    '612100004', '44444444D', 'Carrer de Balmes, 200',     '08006', 'Barcelona',   true],
+            [5,  'Laura',    'López Jiménez',      '612100005', '55555555E', 'Passeig de Gràcia, 55',     '08007', 'Barcelona',   false],
+            [6,  'Carlos',   'Rodríguez Blanco',   '612100006', '66666666F', 'Carrer de Muntaner, 88',    '08011', 'Barcelona',   true],
+            [7,  'Sofía',    'Gómez Castillo',     '612100007', '77777777G', 'Gran Via de les Corts, 300','08015', 'Barcelona',   false],
+            [8,  'Miguel',   'Díaz Herrera',       '612100008', '88888888H', 'Carrer de Còrsega, 412',    '08037', 'Barcelona',   true],
+            [9,  'Elena',    'Muñoz Vega',         '612100009', '99999999J', 'Carrer de València, 100',   '08011', 'Barcelona',   false],
+            [10, 'Roberto',  'Álvarez Peña',       '612100010', '10101010K', 'Carrer de Rosselló, 230',   '08008', 'Barcelona',   true],
+            [11, 'Carmen',   'Romero Iglesias',    '612100011', '11111112L', 'Avinguda del Paral·lel, 14','08001', 'Barcelona',   false],
+            [12, 'Javier',   'Navarro Serrano',    '612100012', '12121212M', 'Carrer de Tarragona, 50',   '08015', 'Barcelona',   true],
+            [13, 'Lucía',    'Torres Molina',      '612100013', '13131313N', 'Carrer de Sants, 77',       '08014', 'Barcelona',   false],
+            [14, 'Antonio',  'Ramos Delgado',      '612100014', '14141414P', 'Carrer de la Marina, 210',  '08005', 'Barcelona',   false],
+            [15, 'Cristina', 'Vargas Ortega',      '612100015', '15151515Q', 'Rambla del Poblenou, 30',   '08005', 'Barcelona',   false],
+            [16, 'Sergio',   'Mora Campos',        '612100016', '16161616R', null,                        null,    null,          false],
+            [17, 'Natalia',  'Reyes Guerrero',     '612100017', '17171717S', null,                        null,    null,          false],
+            [18, 'Pablo',    'Giménez Fuentes',    '612100018', '18181818T', null,                        null,    null,          false],
+            [19, 'Irene',    'Castro Pedraza',     '612100019', '19191919V', null,                        null,    null,          false],
+            [20, 'Marcos',   'Cabrera Mendoza',    '612100020', '20202020W', null,                        null,    null,          false],
+        ];
+        $clientes = [];
+        foreach ($clientesData as [$id, $nombre, $apellido, $tel, $dni, $dir, $cp, $ciudad, $factura]) {
+            $clientes[] = ['id' => $id, 'nombre' => $nombre, 'apellido' => $apellido, 'telefono' => $tel, 'dni' => $dni, 'foto_dni' => null, 'direccion' => $dir, 'codigo_postal' => $cp, 'ciudad' => $ciudad, 'necesita_factura' => $factura, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+        }
+        DB::table('clientes')->insert($clientes);
 
         // ============================================================
-        // TRASTEROS
+        // TRASTEROS (12 ocupados — clientes 1–12, 3 libres)
         // ============================================================
-        DB::table('trasteros')->insert([
-            ['id' => 1, 'numero' => 'T-01', 'piso' => 'Planta Baja', 'tamanyo' => 'Pequeño (5m²)',  'precio_mensual' => 60.00,  'cliente_id' => 1, 'fecha_inicio_alquiler' => '2024-01-01', 'notas' => 'Trastero esquina', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'numero' => 'T-02', 'piso' => 'Planta Baja', 'tamanyo' => 'Mediano (10m²)', 'precio_mensual' => 90.00,  'cliente_id' => 2, 'fecha_inicio_alquiler' => '2024-03-01', 'notas' => null,              'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 3, 'numero' => 'T-03', 'piso' => 'Sótano',      'tamanyo' => 'Grande (20m²)',  'precio_mensual' => 150.00, 'cliente_id' => null, 'fecha_inicio_alquiler' => null,       'notas' => 'Disponible',       'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 4, 'numero' => 'T-04', 'piso' => 'Sótano',      'tamanyo' => 'Pequeño (5m²)',  'precio_mensual' => 60.00,  'cliente_id' => 3, 'fecha_inicio_alquiler' => '2023-06-01', 'notas' => null,              'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 5, 'numero' => 'T-05', 'piso' => 'Planta Baja', 'tamanyo' => 'Mediano (10m²)', 'precio_mensual' => 90.00,  'cliente_id' => null, 'fecha_inicio_alquiler' => null,       'notas' => 'Disponible',       'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-        ]);
+        $tamanyos  = ['Pequeño (5m²)', 'Mediano (10m²)', 'Grande (20m²)', 'Extra (30m²)'];
+        $pisosTras = ['Planta Baja', 'Sótano', 'Sótano 2', 'Primera Planta'];
+        $precios   = [60.00, 90.00, 150.00, 200.00];
+        $trasteros = [];
+        for ($i = 1; $i <= 15; $i++) {
+            $idx         = ($i - 1) % 4;
+            $clienteId   = $i <= 12 ? $i : null;
+            $fechaInicio = $clienteId ? Carbon::now()->subMonths(rand(6, 24))->format('Y-m-d') : null;
+            $trasteros[] = [
+                'id'                    => $i,
+                'numero'                => 'T-' . str_pad($i, 2, '0', STR_PAD_LEFT),
+                'piso'                  => $pisosTras[$idx],
+                'tamanyo'               => $tamanyos[$idx],
+                'precio_mensual'        => $precios[$idx],
+                'cliente_id'            => $clienteId,
+                'fecha_inicio_alquiler' => $fechaInicio,
+                'notas'                 => $clienteId ? null : 'Disponible',
+                'created_at'            => Carbon::now(),
+                'updated_at'            => Carbon::now(),
+            ];
+        }
+        DB::table('trasteros')->insert($trasteros);
 
         // ============================================================
-        // PISOS
+        // PISOS (5, los 3 primeros ocupados — clientes 13–15, 2 libres)
         // ============================================================
         DB::table('pisos')->insert([
-            ['id' => 1, 'numero' => 'P-1A', 'piso' => '1º', 'precio_mensual' => 800.00, 'cliente_id' => 4, 'fecha_inicio_alquiler' => '2023-09-01', 'notas' => 'Piso exterior, 3 habitaciones', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'numero' => 'P-1B', 'piso' => '1º', 'precio_mensual' => 750.00, 'cliente_id' => 5, 'fecha_inicio_alquiler' => '2024-01-01', 'notas' => 'Piso interior, 2 habitaciones', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 3, 'numero' => 'P-2A', 'piso' => '2º', 'precio_mensual' => 850.00, 'cliente_id' => null, 'fecha_inicio_alquiler' => null, 'notas' => 'Disponible, recién reformado', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 1, 'numero' => 'P-1A', 'piso' => '1º', 'precio_mensual' => 800.00, 'cliente_id' => 13, 'fecha_inicio_alquiler' => '2024-01-01', 'notas' => 'Piso exterior, 3 hab.',   'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 2, 'numero' => 'P-1B', 'piso' => '1º', 'precio_mensual' => 750.00, 'cliente_id' => 14, 'fecha_inicio_alquiler' => '2023-09-01', 'notas' => 'Piso interior, 2 hab.',  'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 3, 'numero' => 'P-2A', 'piso' => '2º', 'precio_mensual' => 850.00, 'cliente_id' => 15, 'fecha_inicio_alquiler' => '2024-06-01', 'notas' => 'Recién reformado, 3 hab.','created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 4, 'numero' => 'P-2B', 'piso' => '2º', 'precio_mensual' => 820.00, 'cliente_id' => null, 'fecha_inicio_alquiler' => null, 'notas' => 'Disponible', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 5, 'numero' => 'P-3A', 'piso' => '3º', 'precio_mensual' => 900.00, 'cliente_id' => null, 'fecha_inicio_alquiler' => null, 'notas' => 'Disponible', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
         ]);
 
         // ============================================================
-        // PAGOS DE ALQUILER (3 meses)
+        // PAGOS DE ALQUILER
+        // 12 trasteros × 3 meses = 36 registros
+        //  3 pisos    × 3 meses =  9 registros
+        // Total: 45 pagos  → pages: 15+15+15
         // ============================================================
         $meses = [];
         for ($i = 2; $i >= 0; $i--) {
-            $fecha = Carbon::now()->subMonths($i);
-            $meses[] = ['mes' => $fecha->month, 'anyo' => $fecha->year];
+            $f = Carbon::now()->subMonths($i);
+            $meses[] = ['mes' => (int)$f->month, 'anyo' => (int)$f->year];
         }
 
-        $pagos = [];
-        $pagoId = 1;
+        $pagos    = [];
+        $pagoId   = 1;
+        $detalles = [];
+        $detId    = 1;
 
-        // T-01 → cliente 1: pagados los 2 primeros, pendiente el último
-        foreach ($meses as $idx => $m) {
-            $pagos[] = ['id' => $pagoId++, 'cliente_id' => 1, 'tipo' => 'trastero', 'referencia_id' => 1, 'mes' => $m['mes'], 'anyo' => $m['anyo'], 'importe_total' => 60.00,  'pagado' => ($idx < 2) ? 60.00 : 0.00,  'estado' => ($idx < 2) ? 'pagado' : 'pendiente', 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+        // Trasteros ocupados (clientes 1-12, trasteros 1-12)
+        for ($t = 1; $t <= 12; $t++) {
+            $clienteId = $t;
+            $precio    = $precios[($t - 1) % 4];
+            foreach ($meses as $idx => $m) {
+                $pagado = match(true) {
+                    $idx === 0                => $precio,          // mes más antiguo: pagado
+                    $idx === 1 && $t % 3 === 0 => round($precio / 2, 2), // cada 3 trasteros: parcial
+                    $idx === 1               => $precio,          // el resto del mes del medio: pagado
+                    default                  => 0.00,             // mes actual: pendiente
+                };
+                $estado = match(true) {
+                    $pagado >= $precio => 'pagado',
+                    $pagado > 0        => 'parcial',
+                    default            => 'pendiente',
+                };
+                $pagos[] = [
+                    'id'            => $pagoId,
+                    'cliente_id'    => $clienteId,
+                    'tipo'          => 'trastero',
+                    'referencia_id' => $t,
+                    'mes'           => $m['mes'],
+                    'anyo'          => $m['anyo'],
+                    'importe_total' => $precio,
+                    'pagado'        => $pagado,
+                    'estado'        => $estado,
+                    'notas'         => null,
+                    'created_at'    => Carbon::now(),
+                    'updated_at'    => Carbon::now(),
+                ];
+                if ($pagado > 0) {
+                    $detalles[] = ['id' => $detId++, 'pago_alquiler_id' => $pagoId, 'importe' => $pagado, 'fecha_pago' => Carbon::create($m['anyo'], $m['mes'], 5)->format('Y-m-d'), 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+                }
+                $pagoId++;
+            }
         }
-        // T-02 → cliente 2: primero pagado, segundo parcial, tercero pendiente
-        foreach ($meses as $idx => $m) {
-            $pagado = ($idx === 0) ? 90.00 : ($idx === 1 ? 45.00 : 0.00);
-            $estado = ($idx === 0) ? 'pagado' : ($idx === 1 ? 'parcial' : 'pendiente');
-            $pagos[] = ['id' => $pagoId++, 'cliente_id' => 2, 'tipo' => 'trastero', 'referencia_id' => 2, 'mes' => $m['mes'], 'anyo' => $m['anyo'], 'importe_total' => 90.00,  'pagado' => $pagado, 'estado' => $estado, 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
-        }
-        // T-04 → cliente 3: todos pagados
-        foreach ($meses as $idx => $m) {
-            $pagos[] = ['id' => $pagoId++, 'cliente_id' => 3, 'tipo' => 'trastero', 'referencia_id' => 4, 'mes' => $m['mes'], 'anyo' => $m['anyo'], 'importe_total' => 60.00,  'pagado' => 60.00, 'estado' => 'pagado', 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
-        }
-        // P-1A → cliente 4: últimos pagados, actual pendiente
-        foreach ($meses as $idx => $m) {
-            $pagos[] = ['id' => $pagoId++, 'cliente_id' => 4, 'tipo' => 'piso', 'referencia_id' => 1, 'mes' => $m['mes'], 'anyo' => $m['anyo'], 'importe_total' => 800.00, 'pagado' => ($idx < 2) ? 800.00 : 0.00, 'estado' => ($idx < 2) ? 'pagado' : 'pendiente', 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
-        }
-        // P-1B → cliente 5: primero pagado, resto pendientes
-        foreach ($meses as $idx => $m) {
-            $pagos[] = ['id' => $pagoId++, 'cliente_id' => 5, 'tipo' => 'piso', 'referencia_id' => 2, 'mes' => $m['mes'], 'anyo' => $m['anyo'], 'importe_total' => 750.00, 'pagado' => ($idx === 0) ? 750.00 : 0.00, 'estado' => ($idx === 0) ? 'pagado' : 'pendiente', 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+
+        // Pisos ocupados (clientes 13-15, pisos 1-3)
+        $preciosPisos = [800.00, 750.00, 850.00];
+        for ($p = 1; $p <= 3; $p++) {
+            $clienteId = 12 + $p;
+            $precio    = $preciosPisos[$p - 1];
+            foreach ($meses as $idx => $m) {
+                $pagado = ($idx < 2) ? $precio : 0.00;
+                $estado = ($idx < 2) ? 'pagado' : 'pendiente';
+                $pagos[] = [
+                    'id'            => $pagoId,
+                    'cliente_id'    => $clienteId,
+                    'tipo'          => 'piso',
+                    'referencia_id' => $p,
+                    'mes'           => $m['mes'],
+                    'anyo'          => $m['anyo'],
+                    'importe_total' => $precio,
+                    'pagado'        => $pagado,
+                    'estado'        => $estado,
+                    'notas'         => null,
+                    'created_at'    => Carbon::now(),
+                    'updated_at'    => Carbon::now(),
+                ];
+                if ($pagado > 0) {
+                    $detalles[] = ['id' => $detId++, 'pago_alquiler_id' => $pagoId, 'importe' => $pagado, 'fecha_pago' => Carbon::create($m['anyo'], $m['mes'], 5)->format('Y-m-d'), 'notas' => null, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+                }
+                $pagoId++;
+            }
         }
 
         DB::table('pagos_alquiler')->insert($pagos);
-
-        // ============================================================
-        // DETALLE PAGOS ALQUILER
-        // ============================================================
-        $detalles = [];
-        $detalleId = 1;
-        foreach ($pagos as $p) {
-            if ($p['pagado'] > 0) {
-                $detalles[] = [
-                    'id'               => $detalleId++,
-                    'pago_alquiler_id' => $p['id'],
-                    'importe'          => $p['pagado'],
-                    'fecha_pago'       => Carbon::create($p['anyo'], $p['mes'], 5)->format('Y-m-d'),
-                    'notas'            => null,
-                    'created_at'       => Carbon::now(),
-                    'updated_at'       => Carbon::now(),
-                ];
-            }
-        }
         DB::table('detalle_pagos_alquiler')->insert($detalles);
 
         // ============================================================
-        // GASTOS
+        // 20 GASTOS
         // ============================================================
-        DB::table('gastos')->insert([
-            ['id' => 1, 'tipo' => 'agua',         'descripcion' => 'Factura agua Enero 2026',          'referencia_tipo' => 'general', 'referencia_id' => null, 'fecha_emision' => '2026-01-15', 'fecha_vencimiento' => '2026-02-15', 'importe_total' => 120.50, 'pagado' => 120.50, 'estado' => 'pagado',   'notas' => null,                    'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'tipo' => 'luz',          'descripcion' => 'Factura luz Enero 2026',           'referencia_tipo' => 'general', 'referencia_id' => null, 'fecha_emision' => '2026-01-20', 'fecha_vencimiento' => '2026-02-20', 'importe_total' => 235.80, 'pagado' => 235.80, 'estado' => 'pagado',   'notas' => null,                    'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 3, 'tipo' => 'agua',         'descripcion' => 'Factura agua Febrero 2026',        'referencia_tipo' => 'general', 'referencia_id' => null, 'fecha_emision' => '2026-02-15', 'fecha_vencimiento' => '2026-03-15', 'importe_total' => 115.30, 'pagado' => 0.00,   'estado' => 'pendiente','notas' => null,                    'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 4, 'tipo' => 'luz',          'descripcion' => 'Factura luz Febrero 2026',         'referencia_tipo' => 'general', 'referencia_id' => null, 'fecha_emision' => '2026-02-20', 'fecha_vencimiento' => '2026-03-20', 'importe_total' => 198.60, 'pagado' => 100.00, 'estado' => 'parcial',  'notas' => 'Pendiente pago completo','created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 5, 'tipo' => 'mantenimiento','descripcion' => 'Reparación fontanería piso P-1A',  'referencia_tipo' => 'piso',    'referencia_id' => 1,    'fecha_emision' => '2026-02-10', 'fecha_vencimiento' => '2026-02-28', 'importe_total' => 350.00, 'pagado' => 350.00, 'estado' => 'pagado',   'notas' => 'Factura nº 2026-0123',  'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-        ]);
+        $tipos        = ['agua', 'luz', 'comunidad', 'mantenimiento', 'otro'];
+        $tipoLabels   = ['Factura agua', 'Factura luz', 'Cuota comunidad', 'Mantenimiento', 'Otros gastos'];
+        $mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-        // ============================================================
-        // DETALLE GASTOS
-        // ============================================================
-        DB::table('detalle_gastos')->insert([
-            ['id' => 1, 'gasto_id' => 1, 'importe' => 120.50, 'fecha_pago' => '2026-02-10', 'notas' => null,           'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'gasto_id' => 2, 'importe' => 235.80, 'fecha_pago' => '2026-02-15', 'notas' => null,           'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 3, 'gasto_id' => 4, 'importe' => 100.00, 'fecha_pago' => '2026-02-25', 'notas' => 'Pago parcial', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 4, 'gasto_id' => 5, 'importe' => 350.00, 'fecha_pago' => '2026-02-12', 'notas' => null,           'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-        ]);
+        $gastosRows  = [];
+        $gDetalles   = [];
+        $gastoDet    = 1;
 
-        $this->command->info('✅ Seeder completado correctamente.');
+        for ($g = 1; $g <= 20; $g++) {
+            $tipoIdx        = ($g - 1) % 5;
+            $tipo           = $tipos[$tipoIdx];
+            $mesOffset      = $g - 1;            // cada gasto en un mes diferente (últimos 20 meses)
+            $fechaEmision   = Carbon::now()->subMonths(19 - ($g - 1))->startOfMonth()->addDays(14);
+            $fechaVenc      = (clone $fechaEmision)->addDays(30);
+            $importe        = round(50 + ($g * 17.5), 2);
+            $refTipo        = ($g % 4 === 0) ? 'piso' : (($g % 4 === 1) ? 'trastero' : 'general');
+            $refId          = ($refTipo === 'piso') ? (($g % 3) + 1) : (($refTipo === 'trastero') ? (($g % 12) + 1) : null);
+
+            // Estado: primeros 8 pagados, 9-14 parciales o pendientes variados, últimos 6 pendientes
+            if ($g <= 8) {
+                $pagado = $importe;
+                $estado = 'pagado';
+            } elseif ($g <= 14) {
+                $pagado = ($g % 2 === 0) ? round($importe * 0.5, 2) : 0.00;
+                $estado = ($g % 2 === 0) ? 'parcial' : 'pendiente';
+            } else {
+                $pagado = 0.00;
+                $estado = 'pendiente';
+            }
+
+            $mes     = $mesesNombres[$fechaEmision->month - 1];
+            $anyo    = $fechaEmision->year;
+            $label   = $tipoLabels[$tipoIdx];
+
+            $gastosRows[] = [
+                'id'                => $g,
+                'tipo'              => $tipo,
+                'descripcion'       => "{$label} {$mes} {$anyo}",
+                'referencia_tipo'   => $refTipo,
+                'referencia_id'     => $refId,
+                'fecha_emision'     => $fechaEmision->format('Y-m-d'),
+                'fecha_vencimiento' => $fechaVenc->format('Y-m-d'),
+                'importe_total'     => $importe,
+                'pagado'            => $pagado,
+                'estado'            => $estado,
+                'notas'             => $g <= 8 ? 'Factura nº 20' . str_pad($g, 2, '0', STR_PAD_LEFT) : null,
+                'created_at'        => Carbon::now(),
+                'updated_at'        => Carbon::now(),
+            ];
+
+            if ($pagado > 0) {
+                $gDetalles[] = [
+                    'id'         => $gastoDet++,
+                    'gasto_id'   => $g,
+                    'importe'    => $pagado,
+                    'fecha_pago' => $fechaEmision->addDays(10)->format('Y-m-d'),
+                    'notas'      => $estado === 'parcial' ? 'Pago parcial' : null,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ];
+            }
+        }
+
+        DB::table('gastos')->insert($gastosRows);
+        DB::table('detalle_gastos')->insert($gDetalles);
+
+        $this->command->info('✅ Seeder completado: 20 clientes, 45 pagos, 20 gastos.');
     }
 }
 
