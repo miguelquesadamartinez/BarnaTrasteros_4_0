@@ -10,19 +10,49 @@ function fmtDate(v) {
   return v ? v.split('T')[0] : '—'
 }
 
-function buildPdf(titulo, rows, importeDetalle) {
+async function buildPdf(titulo, rows, importeDetalle) {
   const doc = new jsPDF()
 
-  // ── Cabecera azul ──────────────────────────────────────────
-  doc.setFillColor(25, 55, 110)
-  doc.rect(0, 0, 210, 32, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(22)
-  doc.setFont('helvetica', 'bold')
-  doc.text('BARNATRASTEROS', 15, 19)
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text('Sistema de Gestión de Alquileres', 15, 27)
+  // eMiKi
+   let logoData = null
+    try {
+      const backendBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+      const response = await fetch(`${backendBase}/logo`)
+      if (response.ok) {
+        const blob = await response.blob()
+        logoData = await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result)
+          reader.onerror = () => resolve(null)
+          reader.readAsDataURL(blob)
+        })
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar el logo:', e)
+    }
+
+    // Cabecera roja
+    doc.setFillColor(252, 193, 5)
+    doc.rect(0, 0, 210, 5, 'F')
+
+    doc.setFillColor(248, 248, 248)
+    doc.rect(0, 5, 210, 46, 'F')
+    
+    // Texto de empresa siempre visible
+    // Logo encima del texto si se cargó
+    if (logoData) {
+      doc.addImage(logoData, 'JPEG', 12,8, 35, 14)
+    }
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('C/ Velia, 81 - 08016 - Barcelona', 12, 26)
+    doc.text('Miguel Quesada Cantos', 12, 32)
+    doc.text('DNI 36945618M', 12, 36)
+
+    doc.text('Telf: 696 412 959 - 93 352 2003', 12, 42)
+    doc.text('www.barnatrasteros.com', 12, 45)
+    doc.text('info@barnatrasteros.com', 12, 48)
 
   // ── Título del recibo ──────────────────────────────────────
   doc.setTextColor(25, 55, 110)
@@ -76,7 +106,7 @@ export function usePdfRecibo() {
    * @param {Object} pago       - Objeto PagoAlquiler (con cliente, mes, anyo, etc.)
    * @param {Object} detalle    - Objeto DetallePagoAlquiler (importe, fecha_pago, notas)
    */
-  function generarReciboPago(pago, detalle) {
+  async function generarReciboPago(pago, detalle) {
     const rows = [
       ['Nº Recibo',          `#${detalle.id}`],
       ['Tipo de propiedad',  pago.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero'],
@@ -91,7 +121,7 @@ export function usePdfRecibo() {
     ]
     if (detalle.notas) rows.push(['Notas', detalle.notas])
 
-    const doc = buildPdf('RECIBO DE PAGO DE ALQUILER', rows, detalle.importe)
+    const doc = await buildPdf('RECIBO DE PAGO DE ALQUILER', rows, detalle.importe)
     doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}_id${detalle.id}.pdf`)
   }
 
@@ -100,7 +130,7 @@ export function usePdfRecibo() {
    * @param {Object} gasto   - Objeto Gasto completo
    * @param {Object} detalle - Objeto DetalleGasto (importe, fecha_pago, notas)
    */
-  function generarReciboGasto(gasto, detalle) {
+  async function generarReciboGasto(gasto, detalle) {
     const rows = [
       ['Nº Recibo',       `#${detalle.id}`],
       ['Tipo de gasto',   TIPOS_GASTO[gasto.tipo] || gasto.tipo],
@@ -117,7 +147,7 @@ export function usePdfRecibo() {
     ]
     if (detalle.notas) rows.push(['Notas', detalle.notas])
 
-    const doc = buildPdf('RECIBO DE PAGO DE GASTO', rows, detalle.importe)
+    const doc = await buildPdf('RECIBO DE PAGO DE GASTO', rows, detalle.importe)
     doc.save(`recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
 
@@ -126,7 +156,7 @@ export function usePdfRecibo() {
    * sin necesitar un detalle concreto. Sirve para cualquier estado.
    * @param {Object} pago - Objeto PagoAlquiler
    */
-  function generarReciboPagoTotal(pago) {
+  async function generarReciboPagoTotal(pago) {
     const hoy = new Date().toLocaleDateString('es-ES')
     const rows = [
       ['Tipo de propiedad',  pago.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero'],
@@ -141,7 +171,7 @@ export function usePdfRecibo() {
     ]
     if (pago.notas) rows.push(['Notas', pago.notas])
 
-    const doc = buildPdf('RESUMEN DE ALQUILER', rows, pago.importe_total)
+    const doc = await buildPdf('RESUMEN DE ALQUILER', rows, pago.importe_total)
     doc.save(`resumen_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
   }
 
@@ -150,7 +180,7 @@ export function usePdfRecibo() {
    * sin necesitar un detalle concreto. Sirve para cualquier estado.
    * @param {Object} gasto - Objeto Gasto completo
    */
-  function generarReciboGastoTotal(gasto) {
+  async function generarReciboGastoTotal(gasto) {
     const hoy = new Date().toLocaleDateString('es-ES')
     const rows = [
       ['Tipo de gasto',   TIPOS_GASTO[gasto.tipo] || gasto.tipo],
@@ -168,7 +198,7 @@ export function usePdfRecibo() {
     ]
     if (gasto.notas) rows.push(['Notas', gasto.notas])
 
-    const doc = buildPdf('RESUMEN DE GASTO', rows, gasto.importe_total)
+    const doc = await buildPdf('RESUMEN DE GASTO', rows, gasto.importe_total)
     doc.save(`resumen_gasto_${gasto.id}_${gasto.tipo}.pdf`)
   }
 
@@ -178,10 +208,13 @@ export function usePdfRecibo() {
    * @param {number} mes
    * @param {number} anyo
    */
+
+  // eMiKi
+
   async function generarFacturaCliente(factura, mes, anyo) {
     const { cliente, pagos, importe_total, total_pagado } = factura
     const hoy = new Date().toLocaleDateString('es-ES')
-    const numFactura = `Factura ${anyo} - ${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
+    const numFactura = `${anyo} - ${String(mes).padStart(2,'0')}-${String(cliente.id).padStart(4,'0')}`
 
     // Cargar logo JPG desde la API del backend (con CORS)
     let logoData = null
@@ -204,60 +237,67 @@ export function usePdfRecibo() {
     const doc = new jsPDF()
 
     // Cabecera roja
-    doc.setFillColor(255, 255, 255)
+    doc.setFillColor(252, 193, 5)
     doc.rect(0, 0, 210, 5, 'F')
 
-    doc.setFillColor(192, 57, 43)
-    doc.rect(0, 5, 210, 36, 'F')
+    doc.setFillColor(248, 248, 248)
+    doc.rect(0, 5, 210, 46, 'F')
     
     // Texto de empresa siempre visible
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    doc.text('BARNATRASTEROS', 15, 14)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Sistema de Gestión de Alquileres', 15, 24)
     // Logo encima del texto si se cargó
     if (logoData) {
-      doc.addImage(logoData, 'JPEG', 12, 10, 72, 26)
+      doc.addImage(logoData, 'JPEG', 12,8, 35, 14)
     }
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('C/ Velia, 81 - 08016 - Barcelona', 12, 26)
+    doc.text('Miguel Quesada Cantos', 12, 32)
+    doc.text('DNI 36945618M', 12, 36)
+
+    doc.text('Telf: 696 412 959 - 93 352 2003', 12, 42)
+    doc.text('www.barnatrasteros.com', 12, 45)
+    doc.text('info@barnatrasteros.com', 12, 48)
+    
 
     // Número factura y fecha
-    doc.setTextColor(255, 255, 255)
+    doc.setTextColor(0, 0, 0)
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text(`FACTURA ${numFactura}`, 195, 20, { align: 'right' })
+    doc.text(`FACTURA`, 195, 16, { align: 'right' })
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Período: ${MESES[mes]} ${anyo}`, 195, 28, { align: 'right' })
-    doc.text(`Emitida: ${hoy}`, 195, 34, { align: 'right' })
+    doc.text(`Fecha:`, 195, 24, { align: 'right' })
+    doc.text(`${hoy}`, 195, 30, { align: 'right' })
+
+    doc.text(`Nº Factura ${numFactura}`, 195, 38, { align: 'right' })
 
     // Datos cliente
-    let y = 50
-    doc.setFillColor(248, 248, 248)
-    doc.rect(15, y - 4, 85, 38, 'F')
-    doc.setDrawColor(220, 220, 220)
-    doc.rect(15, y - 4, 85, 38, 'S')
+    let y = 55
+    //doc.setFillColor(248, 248, 248)
+    //doc.rect(15, y - 4, 85, 48, 'F')
+    //doc.setDrawColor(220, 220, 220)
+    //doc.rect(15, y - 4, 85, 48, 'S')
     doc.setTextColor(120, 120, 120)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text('DATOS DEL CLIENTE', 18, y + 2)
+    doc.text('Facturado a:', 12, y + 2)
+    doc.rect(12, y + 4, 85, 0.5, 'S')
+    doc.rect(12, y + 4, 85, 0.5, 'F')
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(30, 30, 30)
     doc.setFontSize(10)
-    doc.text(`${cliente.nombre} ${cliente.apellido}`, 18, y + 9)
+    doc.text(`${cliente.nombre} ${cliente.apellido}`, 12, y + 9)
     doc.setFontSize(9)
     doc.setTextColor(80, 80, 80)
-    doc.text(`DNI: ${cliente.dni}`, 18, y + 15)
-    if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 18, y + 20)
-    if (cliente.direccion) doc.text(cliente.direccion, 18, y + 25)
-    if (cliente.ciudad) doc.text(`${cliente.codigo_postal || ''} ${cliente.ciudad}`.trim(), 18, y + (cliente.direccion ? 30 : 25))
+    doc.text(`Número identificación fiscal: ${cliente.dni}`, 12, y + 15)
+    if (cliente.direccion) doc.text(cliente.direccion, 12, y + 20)
+    if (cliente.ciudad) doc.text(`${cliente.codigo_postal || ''} ${cliente.ciudad}`.trim(), 12, y + (cliente.direccion ? 25 : 20))
 
     // Tabla de conceptos
     y = 90
-    doc.setFillColor(192, 57, 43)
-    doc.rect(15, y, 180, 9, 'F')
+    doc.setFillColor(252, 193, 5)
+    doc.rect(12, y, 185, 9, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
@@ -268,15 +308,15 @@ export function usePdfRecibo() {
     y += 9
     const ROW = 9
     pagos.forEach((p, i) => {
-      const label = p.tipo === 'piso' ? `Alquiler Piso #${p.referencia_id}` : `Alquiler Trastero #${p.referencia_id}`
+      const label = p.tipo === 'piso' ? `Arrendamiento Piso ${p.numero ?? p.referencia_id}` : `Arrendamiento Trastero ${p.numero ?? p.referencia_id}`
       doc.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 248 : 255)
-      doc.rect(15, y, 180, ROW, 'F')
+      doc.rect(12, y, 185, ROW, 'F')
       doc.setDrawColor(230, 230, 230)
-      doc.line(15, y + ROW, 195, y + ROW)
+      doc.line(12, y + ROW, 195, y + ROW)
       doc.setTextColor(30, 30, 30)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      doc.text(label, 18, y + 6)
+      doc.text(label, 15, y + 6)
       doc.text(`${MESES[mes]} ${anyo}`, 100, y + 6)
       doc.setFont('helvetica', 'bold')
       doc.text(fmt(p.importe_total), 185, y + 6, { align: 'right' })
@@ -292,7 +332,7 @@ export function usePdfRecibo() {
     const pendiente     = Math.max(0, totalFactura - totalPagado)
 
     y += 6
-    doc.setDrawColor(192, 57, 43)
+    doc.setDrawColor(252, 193, 5)
     doc.setLineWidth(0.5)
     doc.line(120, y, 195, y)
     y += 5
@@ -301,13 +341,11 @@ export function usePdfRecibo() {
       { lbl: 'Base imponible:',  val: fmt(baseImponible), bold: false },
       { lbl: 'IVA (21%):',       val: fmt(ivaImporte),    bold: false },
       { lbl: 'TOTAL FACTURA:',   val: fmt(totalFactura),  bold: true,  highlight: true },
-      { lbl: 'Total pagado:',    val: fmt(totalPagado),   bold: false },
-      { lbl: 'Pendiente:',       val: fmt(pendiente),     bold: pendiente > 0 },
     ]
 
     totalesRows.forEach(({ lbl, val, bold, highlight }) => {
       if (highlight) {
-        doc.setFillColor(192, 57, 43)
+        doc.setFillColor(252, 193, 5)
         doc.rect(118, y - 6, 79, 10, 'F')
         doc.setTextColor(255, 255, 255)
       } else {

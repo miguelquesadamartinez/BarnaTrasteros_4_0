@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\PagoAlquiler;
+use App\Models\Trastero;
+use App\Models\Piso;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,9 +36,18 @@ class FacturaController extends Controller
         // Solo los que tienen pagos ese mes
         $result = $clientes->filter(fn ($c) => $c->pagosAlquiler->isNotEmpty())
             ->map(function ($cliente) {
+                $pagos = $cliente->pagosAlquiler->map(function ($pago) {
+                    $data = $pago->toArray();
+                    if ($pago->tipo === 'trastero') {
+                        $data['numero'] = Trastero::find($pago->referencia_id)?->numero ?? $pago->referencia_id;
+                    } else {
+                        $data['numero'] = Piso::find($pago->referencia_id)?->numero ?? $pago->referencia_id;
+                    }
+                    return $data;
+                });
                 return [
                     'cliente'       => $cliente->only(['id','nombre','apellido','dni','telefono','direccion','codigo_postal','ciudad','necesita_factura']),
-                    'pagos'         => $cliente->pagosAlquiler->values(),
+                    'pagos'         => $pagos->values(),
                     'importe_total' => $cliente->pagosAlquiler->sum('importe_total'),
                     'total_pagado'  => $cliente->pagosAlquiler->sum('pagado'),
                 ];
