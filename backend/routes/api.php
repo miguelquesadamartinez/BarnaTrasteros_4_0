@@ -37,6 +37,7 @@ Route::delete('pagos-alquiler/{pagoAlquiler}/detalles/{detalle}', [PagoAlquilerC
 // Gastos
 Route::apiResource('gastos', GastoController::class);
 Route::post('gastos/{gasto}/pago', [GastoController::class, 'registrarPago']);
+Route::delete('gastos/{gasto}/detalles/{detalle}', [GastoController::class, 'eliminarDetalle']);
 Route::post('gastos/{gasto}/imagenes', [GastoController::class, 'subirImagenes']);
 Route::delete('gastos/{gasto}/imagenes/{imagen}', [GastoController::class, 'eliminarImagen']);
 

@@ -163,6 +163,7 @@
                   <th>Importe</th>
                   <th>Notas</th>
                   <th>Recibo</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -177,10 +178,26 @@
                       @click="descargarReciboGasto(editTarget, d)"
                     >📄 PDF</button>
                   </td>
+                  <td>
+                    <button
+                      v-if="deleteDetalleGastoId !== d.id"
+                      class="btn btn-danger btn-sm"
+                      title="Eliminar este pago"
+                      @click="deleteDetalleGastoId = d.id"
+                    >🗑️</button>
+                    <span v-else style="display:inline-flex;gap:.35rem;align-items:center">
+                      <span style="font-size:.8rem;color:#b00">¿Seguro?</span>
+                      <button class="btn btn-danger btn-sm" :disabled="deletingDetalleGasto" @click="doEliminarDetalleGasto(d)">
+                        {{ deletingDetalleGasto ? '...' : '✓' }}
+                      </button>
+                      <button class="btn btn-secondary btn-sm" @click="deleteDetalleGastoId = null">✕</button>
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div v-if="detalleGastoError" class="alert alert-danger" style="margin-top:.5rem">{{ detalleGastoError }}</div>
         </div>
 
         <div class="form-actions">
@@ -269,6 +286,7 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+import api from '@/api'
 
 const store = useGastosStore()
 const trasterosStore = useTrasterosStore()
@@ -295,6 +313,9 @@ const uploading = ref(false)
 const formError = ref('')
 const pagoError = ref('')
 const filesToUpload = ref([])
+const deleteDetalleGastoId  = ref(null)
+const deletingDetalleGasto  = ref(false)
+const detalleGastoError     = ref('')
 
 const TIPOS = { agua: '💧 Agua', luz: '⚡ Luz', comunidad: '🏘️ Comunidad', mantenimiento: '🔧 Mantenimiento', otro: '📄 Otro' }
 function tipoLabel(t) { return TIPOS[t] || t }
@@ -362,6 +383,8 @@ function openNew() {
 
 function openEdit(g) {
   editTarget.value = g
+  deleteDetalleGastoId.value = null
+  detalleGastoError.value    = ''
   form.value = {
     tipo: g.tipo,
     descripcion: g.descripcion,
@@ -380,6 +403,24 @@ function openPago(g) {
   pagoForm.value = { importe: +(g.importe_total) - +(g.pagado), fecha_pago: today(), notas: '' }
   pagoError.value = ''
   showPagoModal.value = true
+}
+
+async function doEliminarDetalleGasto(detalle) {
+  deletingDetalleGasto.value = true
+  detalleGastoError.value    = ''
+  try {
+    const { data } = await api.delete(`/gastos/${editTarget.value.id}/detalles/${detalle.id}`)
+    // Actualizar editTarget con los datos recalculados del servidor
+    editTarget.value = data
+    // Actualizar también la fila en el listado principal
+    const idx = store.gastos.findIndex((g) => g.id === data.id)
+    if (idx !== -1) store.gastos[idx] = data
+    deleteDetalleGastoId.value = null
+  } catch (e) {
+    detalleGastoError.value = e.response?.data?.error || 'Error al eliminar el pago'
+  } finally {
+    deletingDetalleGasto.value = false
+  }
 }
 
 function openImagenes(g) {

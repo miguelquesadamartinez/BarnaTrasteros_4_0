@@ -202,4 +202,34 @@ class GastoController extends Controller
 
         return response()->json(['message' => 'Imagen eliminada']);
     }
+
+    /**
+     * Elimina un detalle (pago realizado) de un gasto y recalcula pagado + estado.
+     */
+    public function eliminarDetalle(Gasto $gasto, DetalleGasto $detalle): JsonResponse
+    {
+        if ($detalle->gasto_id !== $gasto->id) {
+            return response()->json(['error' => 'El detalle no pertenece a este gasto.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $detalle->delete();
+
+            $gasto->pagado = $gasto->detalles()->sum('importe');
+            $gasto->recalcularEstado(); // guarda internamente
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al eliminar el detalle: ' . $e->getMessage()], 500);
+        }
+
+        $gasto->load(['detalles', 'imagenes']);
+        $gasto->imagenes->each(function ($imagen) {
+            $imagen->url = url('storage/' . $imagen->ruta);
+        });
+
+        return response()->json($gasto);
+    }
 }
