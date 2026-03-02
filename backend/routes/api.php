@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PagoAlquilerController;
 use App\Http\Controllers\Api\PisoController;
 use App\Http\Controllers\Api\RelatorioController;
 use App\Http\Controllers\Api\TamanyoTrasteroController;
+use App\Http\Controllers\Api\MantenimientoController;
 use App\Http\Controllers\Api\TrasteroController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,3 +56,6 @@ Route::delete('tamanyo-trasteros/{tamanyoTrastero}', [TamanyoTrasteroController:
 
 // Facturas
 Route::get('facturas', [FacturaController::class, 'index']);
+
+// Mantenimiento - acciones
+Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);

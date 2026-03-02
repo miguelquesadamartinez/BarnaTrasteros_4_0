@@ -9,6 +9,7 @@ import GastosView from '@/views/gastos/GastosView.vue'
 import RelatoriosView from '@/views/relatorios/RelatoriosView.vue'
 import TamanyosTrasterosView from '@/views/mantenimiento/TamanyosTrasterosView.vue'
 import FacturasView from '@/views/mantenimiento/FacturasView.vue'
+import GenerarPagosView from '@/views/mantenimiento/GenerarPagosView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { title: 'Inicio' } },
@@ -20,6 +21,7 @@ const routes = [
   { path: '/relatorios', name: 'relatorios', component: RelatoriosView, meta: { title: 'Relatorios' } },
   { path: '/mantenimiento/tamanyo-trasteros', name: 'tamanyo-trasteros', component: TamanyosTrasterosView, meta: { title: 'Tamaños de Trasteros' } },
   { path: '/mantenimiento/facturas', name: 'facturas', component: FacturasView, meta: { title: 'Facturas del Mes' } },
+  { path: '/mantenimiento/generar-pagos', name: 'generar-pagos', component: GenerarPagosView, meta: { title: 'Generar Pagos' } },
 ]
 
 const router = createRouter({

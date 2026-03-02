@@ -8,6 +8,15 @@
     <!-- Filtros -->
     <div class="card">
       <div class="filters-bar">
+        <div class="filter-item" style="min-width:200px">
+          <span class="filter-label">Cliente</span>
+          <input
+            v-model="filters.cliente"
+            class="form-control"
+            placeholder="Nombre, apellido o DNI..."
+            @input="onClienteSearch"
+          />
+        </div>
         <div class="filter-item">
           <span class="filter-label">Tipo</span>
           <select v-model="filters.tipo" class="form-control" @change="loadPagos(1)">
@@ -261,7 +270,7 @@ function descargarReciboPago(pago, detalle) {
   generarReciboPago(pago, detalle)
 }
 
-const filters = ref({ tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
+const filters = ref({ cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
 const currentPage = ref(1)
 const showPagoModal = ref(false)
 const showDetalle = ref(false)
@@ -322,13 +331,20 @@ const pisoOptions = computed(() =>
   pisosStore.pisos.map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
 )
 
+let clienteTimer = null
+function onClienteSearch() {
+  clearTimeout(clienteTimer)
+  clienteTimer = setTimeout(() => loadPagos(1), 350)
+}
+
 async function loadPagos(page = currentPage.value) {
   currentPage.value = page
   const params = { page }
-  if (filters.value.tipo) params.tipo = filters.value.tipo
-  if (filters.value.estado) params.estado = filters.value.estado
-  if (filters.value.anyo) params.anyo = filters.value.anyo
-  if (filters.value.mes) params.mes = filters.value.mes
+  if (filters.value.cliente) params.cliente = filters.value.cliente
+  if (filters.value.tipo)    params.tipo    = filters.value.tipo
+  if (filters.value.estado)  params.estado  = filters.value.estado
+  if (filters.value.anyo)    params.anyo    = filters.value.anyo
+  if (filters.value.mes)     params.mes     = filters.value.mes
   await store.fetchPagos(params)
 }
 
@@ -337,7 +353,7 @@ function onPageChange(page) {
 }
 
 function clearFilters() {
-  filters.value = { tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' }
+  filters.value = { cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' }
   currentPage.value = 1
   loadPagos(1)
 }

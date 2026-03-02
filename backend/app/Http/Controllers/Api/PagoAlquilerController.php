@@ -27,6 +27,16 @@ class PagoAlquilerController extends Controller
             $query->where('cliente_id', $request->cliente_id);
         }
 
+        if ($request->filled('cliente')) {
+            $search = $request->cliente;
+            $query->whereHas('cliente', function ($q) use ($search) {
+                $q->whereRaw("CONCAT(nombre, ' ', apellido) LIKE ?", ["%{$search}%"])
+                  ->orWhere('nombre',   'like', "%{$search}%")
+                  ->orWhere('apellido', 'like', "%{$search}%")
+                  ->orWhere('dni',      'like', "%{$search}%");
+            });
+        }
+
         if ($request->has('estado') && $request->estado) {
             $query->where('estado', $request->estado);
         }

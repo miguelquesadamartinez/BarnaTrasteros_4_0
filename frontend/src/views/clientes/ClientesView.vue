@@ -136,14 +136,30 @@
         </p>
 
         <div v-if="editing" class="form-group">
-          <label class="form-label">Trastero asignado</label>
+          <label class="form-label">Trasteros asignados</label>
+          <div v-if="form.trastero_ids.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
+            <span
+              v-for="tid in form.trastero_ids"
+              :key="tid"
+              class="badge badge-info"
+              style="display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem;padding:.25rem .55rem"
+            >
+              {{ trasteroLabel(tid) }}
+              <button
+                type="button"
+                @click="removeTrastero(tid)"
+                style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:1.1rem;line-height:1;color:inherit;opacity:.8"
+              >&times;</button>
+            </span>
+          </div>
+          <span v-else class="text-muted" style="font-size:.85rem;display:block;margin-bottom:.4rem">Ningún trastero asignado</span>
           <SearchSelect
-            v-model="form.trastero_id"
-            :options="trasteroOptions"
-            placeholder="Buscar trastero..."
-            :allow-clear="true"
+            v-model="addTrasteroId"
+            :options="trasteroAddOptions"
+            placeholder="Añadir trastero..."
+            :allow-clear="false"
           />
-          <small class="text-muted">Al cambiar, se actualiza el trastero automáticamente al guardar.</small>
+          <small class="text-muted">Al guardar se actualizan las asignaciones automáticamente.</small>
         </div>
 
         <div v-if="editing" class="form-group">
@@ -177,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
@@ -212,14 +228,35 @@ const emptyForm = () => ({
   nombre: '', apellido: '', dni: '', telefono: '',
   direccion: '', codigo_postal: '', ciudad: '', necesita_factura: false,
   foto_dni_file: null, foto_dni_preview: null,
-  trastero_id: null, piso_id: null,
+  trastero_ids: [], piso_id: null,
 })
 const form = ref(emptyForm())
 
-// Opciones para selects (trasteros libres o con el mismo cliente)
-const trasteroOptions = computed(() =>
+// Trastero añadir: libres o del cliente actual, excluye los ya seleccionados
+const addTrasteroId = ref(null)
+watch(addTrasteroId, (val) => {
+  if (val && !form.value.trastero_ids.includes(val)) {
+    form.value.trastero_ids.push(val)
+    nextTick(() => { addTrasteroId.value = null })
+  }
+})
+
+function removeTrastero(id) {
+  form.value.trastero_ids = form.value.trastero_ids.filter((i) => i !== id)
+}
+
+function trasteroLabel(id) {
+  const t = trasterosStore.trasteros.find((tt) => tt.id === id)
+  return t ? `${t.numero} — ${t.tamanyo} (${t.piso})` : `#${id}`
+}
+
+const trasteroAddOptions = computed(() =>
   trasterosStore.trasteros
-    .filter((t) => !t.cliente_id || (editing.value && form.value._clienteId && t.cliente_id === form.value._clienteId))
+    .filter((t) => {
+      const isFree = !t.cliente_id
+      const isThisClient = editing.value && t.cliente_id === form.value._clienteId
+      return (isFree || isThisClient) && !form.value.trastero_ids.includes(t.id)
+    })
     .map((t) => ({ value: t.id, label: `${t.numero} — ${t.tamanyo} (${t.piso})` }))
 )
 
@@ -267,7 +304,6 @@ function openNew() {
 
 function openEdit(c) {
   editing.value = true
-  const trastero = trasterosStore.trasteros.find((t) => t.cliente_id === c.id)
   const piso = pisosStore.pisos.find((p) => p.cliente_id === c.id)
   form.value = {
     nombre: c.nombre,
@@ -280,7 +316,7 @@ function openEdit(c) {
     necesita_factura: !!c.necesita_factura,
     foto_dni_file: null,
     foto_dni_preview: null,
-    trastero_id: trastero?.id ?? null,
+    trastero_ids: c.trasteros?.map((t) => t.id) ?? [],
     piso_id: piso?.id ?? null,
     _id: c.id,
     _clienteId: c.id,
@@ -321,15 +357,24 @@ async function save() {
 
     // Actualizar asignaciones de trastero y piso
     if (editing.value) {
-      // Desasignar trastero anterior si cambió
-      const prevTrastero = trasterosStore.trasteros.find((t) => t.cliente_id === cliente.id)
-      if (prevTrastero && prevTrastero.id !== form.value.trastero_id) {
-        await api.put(`/trasteros/${prevTrastero.id}`, { ...prevTrastero, cliente_id: null, fecha_inicio_alquiler: null })
+      // Trasteros: diff old vs new
+      const oldTrasteroIds = trasterosStore.trasteros
+        .filter((t) => t.cliente_id === cliente.id)
+        .map((t) => t.id)
+      const newTrasteroIds = form.value.trastero_ids
+      // Desasignar trasteros eliminados
+      for (const id of oldTrasteroIds) {
+        if (!newTrasteroIds.includes(id)) {
+          const t = trasterosStore.trasteros.find((tt) => tt.id === id)
+          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: null, fecha_inicio_alquiler: null })
+        }
       }
-      // Asignar nuevo trastero
-      if (form.value.trastero_id) {
-        const t = trasterosStore.trasteros.find((tt) => tt.id === form.value.trastero_id)
-        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id })
+      // Asignar nuevos trasteros
+      for (const id of newTrasteroIds) {
+        if (!oldTrasteroIds.includes(id)) {
+          const t = trasterosStore.trasteros.find((tt) => tt.id === id)
+          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id })
+        }
       }
       // Desasignar piso anterior si cambió
       const prevPiso = pisosStore.pisos.find((p) => p.cliente_id === cliente.id)
