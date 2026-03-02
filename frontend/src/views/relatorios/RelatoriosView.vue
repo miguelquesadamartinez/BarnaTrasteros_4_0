@@ -182,7 +182,7 @@
                       {{ p.tipo === 'piso' ? '🏠' : '📦' }} {{ p.tipo }}
                     </span>
                   </td>
-                  <td>{{ p.referencia_id }}</td>
+                  <td>{{ refNumero(p) }}</td>
                   <td>{{ p.cliente ? `${p.cliente.nombre} ${p.cliente.apellido}` : '—' }}</td>
                   <td>{{ mesNombre(p.mes) }} {{ p.anyo }}</td>
                   <td>{{ formatMoney(p.importe_total) }}</td>
@@ -325,6 +325,16 @@ function formatMoney(v) {
 }
 
 function pendiente(p) { return Math.max(0, +p.importe_total - +p.pagado) }
+
+function refNumero(p) {
+  if (p.tipo === 'trastero') {
+    return trasteros.value.lista?.find(t => t.id === p.referencia_id)?.numero ?? p.referencia_id
+  }
+  if (p.tipo === 'piso') {
+    return pisos.value.lista?.find(pi => pi.id === p.referencia_id)?.numero ?? p.referencia_id
+  }
+  return p.referencia_id
+}
 
 function estadoBadge(e) {
   return { pendiente: 'badge-danger', parcial: 'badge-warning', pagado: 'badge-success' }[e] || 'badge-muted'
