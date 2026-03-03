@@ -160,20 +160,35 @@ docker compose exec backend php artisan pagos:generar 2 2026
 Ejecutar migraciones pendientes:
 
 ```bash
-docker compose exec app php artisan migrate
+docker compose exec backend php artisan migrate
 ```
 
 Reejecutar migraciones desde cero (manteniendo estructura de tablas):
 
 ```bash
-docker compose exec app php artisan migrate:refresh
+docker compose exec backend php artisan migrate:refresh
 ```
 
 Borrar todas las tablas y recrearlas (incluyendo seeders):
 
 ```bash
-docker compose exec app php artisan migrate:fresh --seed
+docker compose exec backend php artisan migrate:fresh --seed
 ```
+
+## Backups and restore
+
+```bash
+docker compose exec backend php artisan db:backup
+```
+
+```bash
+docker compose exec backend php artisan db:restore
+```
+
+```bash
+docker compose exec backend php artisan db:restore backup_2026-03-03_23-00-00.sql.gz
+```
+
 
 ---
 

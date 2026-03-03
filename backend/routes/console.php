@@ -12,6 +12,9 @@ Artisan::command('inspire', function () {
 // Generar pagos mensuales el primer día de cada mes a las 00:05
 Schedule::job(new GenerarPagosMensuales)->monthlyOn(1, '00:05');
 
+// Backup automático diario a las 23:00
+Schedule::command('db:backup')->dailyAt('23:00');
+
 // Comando artisan manual para generar pagos de un mes/año específico
 Artisan::command('pagos:generar {mes?} {anyo?}', function ($mes = null, $anyo = null) {
     $mes  = $mes  ?? now()->month;

@@ -61,3 +61,7 @@ Route::get('facturas', [FacturaController::class, 'index']);
 
 // Mantenimiento - acciones
 Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);
+Route::get('mantenimiento/backups',        [MantenimientoController::class, 'listarBackups']);
+Route::post('mantenimiento/backup',        [MantenimientoController::class, 'backup']);
+Route::post('mantenimiento/restore',       [MantenimientoController::class, 'restore']);
+Route::delete('mantenimiento/backup',      [MantenimientoController::class, 'deleteBackup']);

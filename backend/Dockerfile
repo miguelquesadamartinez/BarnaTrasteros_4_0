@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libzip-dev \
+    default-mysql-client \
+    gzip \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache
 
 # Configure OPcache for performance
