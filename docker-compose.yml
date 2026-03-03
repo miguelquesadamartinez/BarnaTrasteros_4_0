@@ -11,7 +11,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./docker/mysql_data_db:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "barnauser", "-pbarnapass"]
@@ -139,8 +139,6 @@ services:
       - barnatrasteros_net
 
 volumes:
-  mysql_data:
-    driver: local
   backend_vendor:
     driver: local
 
