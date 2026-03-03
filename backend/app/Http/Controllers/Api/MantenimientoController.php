@@ -112,9 +112,13 @@ class MantenimientoController extends Controller
         $exitCode = Artisan::call('db:restore', ['filename' => $filename]);
 
         if ($exitCode !== 0) {
-            return response()->json(['error' => 'Error al restaurar el backup 2.'], 500);
+            return response()->json(['error' => 'Error al restaurar el backup.'], 500);
         }
-        return response()->json(['error' => 'Error al restaurar el backup 2.'], 500);
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => "Base de datos restaurada desde: {$filename}",
+        ]);
     }
     /**
      * Elimina un archivo de backup.
