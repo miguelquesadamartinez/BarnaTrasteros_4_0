@@ -155,6 +155,26 @@ docker compose exec backend php artisan pagos:generar
 docker compose exec backend php artisan pagos:generar 2 2026
 ```
 
+## Migraciones de Laravel en Docker
+
+Ejecutar migraciones pendientes:
+
+```bash
+docker compose exec app php artisan migrate
+```
+
+Reejecutar migraciones desde cero (manteniendo estructura de tablas):
+
+```bash
+docker compose exec app php artisan migrate:refresh
+```
+
+Borrar todas las tablas y recrearlas (incluyendo seeders):
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
 ---
 
 ## Estructura del proyecto
