@@ -141,6 +141,18 @@ class GastoController extends Controller
             'notas'      => 'nullable|string',
         ]);
 
+        $pendiente = round((float) $gasto->importe_total - (float) $gasto->pagado, 2);
+
+        if (round((float) $validated['importe'], 2) > $pendiente) {
+            return response()->json([
+                'error' => sprintf(
+                    'El importe a pagar (%.2f €) supera el pendiente del gasto (%.2f €).',
+                    $validated['importe'],
+                    $pendiente
+                ),
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
             DetalleGasto::create([

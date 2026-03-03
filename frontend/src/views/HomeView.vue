@@ -130,16 +130,16 @@
     <!-- Modal: Registrar Pago -->
     <AppModal v-model="showPagoModal" title="Registrar Pago" size="md">
       <div v-if="pagoTarget" class="mb-2">
-        <p><strong>Tipo:</strong> {{ pagoTarget.tipo }} | <strong>Ref:</strong> {{ pagoTarget.numero ?? pagoTarget.referencia_id }}</p>
         <p><strong>Cliente:</strong> {{ pagoTarget.cliente?.nombre }} {{ pagoTarget.cliente?.apellido }}</p>
-        <p class="text-muted" style="font-size:.85rem">El pago se distribuirá automáticamente entre los meses más antiguos con deuda.</p>
+        <p><strong>Pendiente total del cliente:</strong> <span class="text-danger">{{ formatMoney(pendienteTotalClienteHome) }}</span></p>
+        <p class="text-muted" style="font-size:.85rem">El pago se distribuirá automáticamente entre los meses más antiguos con deuda (pisos y trasteros). No se puede superar el total pendiente del cliente.</p>
       </div>
       <form @submit.prevent="registrarPago">
         <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
         <div class="alert alert-success" v-if="pagoSuccess">{{ pagoSuccess }}</div>
         <div class="form-group">
           <label class="form-label">Importe a pagar (€) *</label>
-          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" required />
+          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pendienteTotalClienteHome || undefined" required />
         </div>
         <div class="form-group">
           <label class="form-label">Fecha de pago *</label>
@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
 import AppModal from '@/components/AppModal.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
@@ -263,6 +263,13 @@ function estadoBadge(e) {
   return { pendiente: 'badge-danger', parcial: 'badge-warning', pagado: 'badge-success' }[e] || 'badge-muted'
 }
 
+const pendienteTotalClienteHome = computed(() => {
+  if (!pagoTarget.value) return 0
+  return pendPagos.value
+    .filter((x) => x.cliente_id === pagoTarget.value.cliente_id && ['pendiente', 'parcial'].includes(x.estado))
+    .reduce((s, x) => s + Math.max(0, +x.importe_total - +x.pagado), 0)
+})
+
 async function loadPendientes(page = 1) {
   pendPage.value    = page
   pendLoading.value = true
@@ -289,7 +296,11 @@ function onPendSearch() {
 
 function openPago(p) {
   pagoTarget.value  = p
-  pagoForm.value    = { importe: calcPendiente(p), fecha_pago: today(), notas: '' }
+  // Total pendiente del cliente en todos sus pagos visibles (pisos + trasteros)
+  const totalPendCliente = pendPagos.value
+    .filter((x) => x.cliente_id === p.cliente_id && ['pendiente', 'parcial'].includes(x.estado))
+    .reduce((s, x) => s + Math.max(0, +x.importe_total - +x.pagado), 0)
+  pagoForm.value    = { importe: Math.round(totalPendCliente * 100) / 100, fecha_pago: today(), notas: '' }
   pagoError.value   = ''
   pagoSuccess.value = ''
   showPagoModal.value = true
@@ -308,8 +319,7 @@ async function registrarPago() {
   pagando.value     = true
   try {
     const { data } = await api.post('/pagos-alquiler/registrar-pago', {
-      tipo:          pagoTarget.value.tipo,
-      referencia_id: pagoTarget.value.referencia_id,
+      cliente_id:    pagoTarget.value.cliente_id,
       importe:       pagoForm.value.importe,
       fecha_pago:    pagoForm.value.fecha_pago,
       notas:         pagoForm.value.notas,

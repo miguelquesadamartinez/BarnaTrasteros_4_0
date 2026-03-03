@@ -66,35 +66,47 @@ class PagoAlquilerController extends Controller
     }
 
     /**
-     * Registrar un pago - distribuye automáticamente entre meses pendientes del mismo tipo/referencia.
-     * El pago se aplica primero al mes más antiguo con saldo pendiente.
+     * Registrar un pago - distribuye automáticamente entre TODOS los meses pendientes del cliente
+     * (pisos y trasteros), ordenados del más antiguo al más reciente.
+     * No se permite pagar más del total pendiente del cliente.
      */
     public function registrarPago(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tipo'         => 'required|in:trastero,piso',
-            'referencia_id'=> 'required|integer',
+            'cliente_id'   => 'required|exists:clientes,id',
             'importe'      => 'required|numeric|min:0.01',
             'fecha_pago'   => 'required|date',
             'notas'        => 'nullable|string',
         ]);
 
+        $clienteId       = $validated['cliente_id'];
+        $importeAplicar  = (float) $validated['importe'];
+        $fechaPago       = $validated['fecha_pago'];
+        $notas           = $validated['notas'] ?? null;
+
+        // Obtener todos los pagos pendientes o parciales del cliente (pisos y trasteros)
+        $pagosPendientes = PagoAlquiler::where('cliente_id', $clienteId)
+            ->whereIn('estado', ['pendiente', 'parcial'])
+            ->orderBy('anyo')
+            ->orderBy('mes')
+            ->get();
+
+        // Calcular el total pendiente del cliente
+        $totalPendiente = $pagosPendientes->sum(fn($p) => max(0, (float) $p->importe_total - (float) $p->pagado));
+
+        if ($importeAplicar > round($totalPendiente, 2)) {
+            return response()->json([
+                'error' => sprintf(
+                    'El importe a pagar (%.2f €) supera el total pendiente del cliente (%.2f €).',
+                    $importeAplicar,
+                    $totalPendiente
+                ),
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $tipo          = $validated['tipo'];
-            $referenciaId  = $validated['referencia_id'];
-            $importeRestante = (float) $validated['importe'];
-            $fechaPago     = $validated['fecha_pago'];
-            $notas         = $validated['notas'] ?? null;
-
-            // Obtener todos los pagos pendientes o parciales, ordenados del más antiguo al más reciente
-            $pagosPendientes = PagoAlquiler::where('tipo', $tipo)
-                ->where('referencia_id', $referenciaId)
-                ->whereIn('estado', ['pendiente', 'parcial'])
-                ->orderBy('anyo')
-                ->orderBy('mes')
-                ->get();
-
+            $importeRestante   = $importeAplicar;
             $pagosActualizados = [];
 
             foreach ($pagosPendientes as $pago) {
@@ -111,7 +123,6 @@ class PagoAlquilerController extends Controller
                 $aplicar = min($importeRestante, $pendiente);
                 $importeRestante -= $aplicar;
 
-                // Crear el detalle
                 DetallePagoAlquiler::create([
                     'pago_alquiler_id' => $pago->id,
                     'importe'          => $aplicar,
@@ -119,15 +130,12 @@ class PagoAlquilerController extends Controller
                     'notas'            => $notas,
                 ]);
 
-                // Actualizar el pago principal
                 $pago->pagado += $aplicar;
                 $pago->recalcularEstado();
 
                 $pagosActualizados[] = $pago->fresh(['detalles']);
             }
 
-            // Si queda importe sin aplicar y no hay más meses pendientes, se descarta o se guarda
-            // Aquí simplemente informamos del sobrante
             DB::commit();
 
             return response()->json([

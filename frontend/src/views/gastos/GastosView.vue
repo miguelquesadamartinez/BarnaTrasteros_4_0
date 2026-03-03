@@ -219,7 +219,7 @@
         <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
         <div class="form-group">
           <label class="form-label">Importe (€) *</label>
-          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" required />
+          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pagoTarget ? +pagoTarget.importe_total - +pagoTarget.pagado : undefined" required />
         </div>
         <div class="form-group">
           <label class="form-label">Fecha de pago *</label>
