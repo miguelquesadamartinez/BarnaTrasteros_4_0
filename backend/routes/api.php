@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 // Clientes
 Route::get('logo', function () {
-    $path = storage_path('app/public/logo.jpg');
+    $path = public_path('logo.jpg');
     if (!file_exists($path)) abort(404);
     return response()->file($path, ['Content-Type' => 'image/jpeg']);
 });
