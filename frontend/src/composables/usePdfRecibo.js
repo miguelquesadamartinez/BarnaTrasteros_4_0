@@ -154,6 +154,9 @@ export function usePdfRecibo() {
       `${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`,
       `Número identificación fiscal: ${pago.cliente.dni}`,
     ]
+    const conceptoRows = [
+      [`Arrendamiento ${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`, `${MESES[pago.mes]} ${pago.anyo}`, detalle.importe],
+    ]
     if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
     const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
     doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}_id${detalle.id}.pdf`)
@@ -244,7 +247,6 @@ export function usePdfRecibo() {
 
     const doc = new jsPDF()
 
-    // Cabecera roja
     doc.setFillColor(252, 193, 5)
     doc.rect(0, 0, 210, 5, 'F')
 
