@@ -55,6 +55,7 @@
           <thead>
             <tr>
               <th>Tipo</th>
+              <th>Referencia</th>
               <th>Cliente</th>
               <th>Mes/Año</th>
               <th>Total</th>
@@ -74,6 +75,7 @@
                   {{ p.tipo === 'piso' ? '🏠 Piso' : '📦 Trastero' }}
                 </span>
               </td>
+              <td>{{ p.numero ?? p.referencia_id }}</td>
               <td>{{ p.cliente ? `${p.cliente.nombre} ${p.cliente.apellido}` : '—' }}</td>
               <td>{{ mesNombre(p.mes) }} {{ p.anyo }}</td>
               <td>{{ formatMoney(p.importe_total) }}</td>
