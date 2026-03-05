@@ -8,6 +8,7 @@ services:
       MYSQL_DATABASE: barnatrasteros
       MYSQL_USER: barnauser
       MYSQL_PASSWORD: barnapass
+      TZ: Europe/Madrid
     ports:
       - "3306:3306"
     volumes:

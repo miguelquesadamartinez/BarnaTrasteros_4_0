@@ -20,7 +20,7 @@ class Piso extends Model
     ];
 
     protected $casts = [
-        'fecha_inicio_alquiler' => 'date',
+        'fecha_inicio_alquiler' => 'date:Y-m-d',
         'precio_mensual' => 'decimal:2',
     ];
 
