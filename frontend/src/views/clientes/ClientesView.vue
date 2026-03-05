@@ -373,7 +373,9 @@ async function save() {
       for (const id of newTrasteroIds) {
         if (!oldTrasteroIds.includes(id)) {
           const t = trasterosStore.trasteros.find((tt) => tt.id === id)
-          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id })
+          const hoy = new Date()
+          const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
         }
       }
       // Desasignar piso anterior si cambió
@@ -384,7 +386,9 @@ async function save() {
       // Asignar nuevo piso
       if (form.value.piso_id) {
         const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
-        if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id })
+        const hoy = new Date()
+        const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+        if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
       }
       // Refrescar trasteros y pisos
       await trasterosStore.fetchTrasteros()
