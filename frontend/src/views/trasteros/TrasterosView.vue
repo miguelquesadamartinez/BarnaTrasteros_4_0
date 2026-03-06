@@ -186,7 +186,6 @@ function openNew() {
 }
 
 function openEdit(t) {
-  console.log('Editando trastero:', t)
   editing.value = true
   form.value = {
     numero: t.numero,
@@ -238,7 +237,7 @@ async function doDelete() {
 
 onMounted(() => {
   store.fetchTrasteros()
-  clientesStore.fetchClientes()
+  clientesStore.fetchAllClientes()
   tamanyosStore.fetchTamanyos()
 })
 </script>

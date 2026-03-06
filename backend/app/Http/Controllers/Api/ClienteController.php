@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class ClienteController extends Controller
 {
@@ -28,6 +29,13 @@ class ClienteController extends Controller
         $perPage = (int) $request->get('per_page', 15);
         $clientes = $query->orderBy('apellido')->orderBy('nombre')->paginate($perPage);
 
+        return response()->json($clientes);
+    }
+
+    public function listAll(Request $request): JsonResponse
+    {
+        $query = Cliente::with(['trasteros', 'pisos']);
+        $clientes = $query->orderBy('apellido')->orderBy('nombre')->get();
         return response()->json($clientes);
     }
 

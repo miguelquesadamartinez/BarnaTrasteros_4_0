@@ -211,6 +211,6 @@ async function doDelete() {
 
 onMounted(() => {
   store.fetchPisos()
-  clientesStore.fetchClientes()
+  clientesStore.fetchAllClientes()
 })
 </script>

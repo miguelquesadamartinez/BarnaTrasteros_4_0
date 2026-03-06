@@ -18,6 +18,7 @@ Route::get('logo', function () {
     return response()->file($path, ['Content-Type' => 'image/jpeg']);
 });
 
+Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
 Route::apiResource('clientes', ClienteController::class);
 
 // Trasteros

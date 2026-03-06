@@ -29,6 +29,19 @@ export const useClientesStore = defineStore('clientes', () => {
     }
   }
 
+   async function fetchAllClientes(params = {}) {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await api.get('/clientes/list-all')
+      clientes.value = data
+    } catch (e) {
+      error.value = e.displayMessage || 'Error al cargar clientes'
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function createCliente(formData) {
     const { data } = await api.post('/clientes', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -53,5 +66,5 @@ export const useClientesStore = defineStore('clientes', () => {
     clientes.value = clientes.value.filter((c) => c.id !== id)
   }
 
-  return { clientes, pagination, loading, error, fetchClientes, createCliente, updateCliente, deleteCliente }
+  return { clientes, pagination, loading, error, fetchClientes, fetchAllClientes, createCliente, updateCliente, deleteCliente }
 })
