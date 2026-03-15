@@ -43,4 +43,5 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan db:seed --force && (php artisan storage:link --force 2>/dev/null || true) && php artisan serve --host=0.0.0.0 --port=8000"]
+#CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan db:seed --force && (php artisan storage:link --force 2>/dev/null || true) && php artisan serve --host=0.0.0.0 --port=8000"]
+CMD ["sh", "-c", "php artisan config:clear && (php artisan storage:link --force 2>/dev/null || true) && php artisan serve --host=0.0.0.0 --port=8000"]
