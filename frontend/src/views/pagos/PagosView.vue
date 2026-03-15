@@ -332,16 +332,7 @@ function estadoBadge(e) {
   return { pendiente: 'badge-danger', parcial: 'badge-warning', pagado: 'badge-success' }[e] || 'badge-muted'
 }
 
-const pendienteTotalCliente = computed(() => {
-  if (!pagoTarget.value) return 0
-  return store.pagos
-    .filter(
-      (p) =>
-        p.cliente_id === pagoTarget.value.cliente_id &&
-        ['pendiente', 'parcial'].includes(p.estado)
-    )
-    .reduce((s, p) => s + pendiente(p), 0)
-})
+const pendienteTotalCliente = ref(0)
 
 const clienteOptions = computed(() =>
   clientesStore.clientes.map((c) => ({ value: c.id, label: `${c.nombre} ${c.apellido} — ${c.dni}` }))
@@ -380,12 +371,15 @@ function clearFilters() {
   loadPagos(1)
 }
 
-function openPago(p) {
+async function openPago(p) {
   pagoTarget.value = p
   // Calculamos el total pendiente del cliente en TODOS sus pagos (pisos + trasteros)
-  const totalPendCliente = store.pagos
-    .filter((x) => x.cliente_id === p.cliente_id && ['pendiente', 'parcial'].includes(x.estado))
-    .reduce((s, x) => s + Math.max(0, +x.importe_total - +x.pagado), 0)
+
+  const totalPendCliente = await api
+    .get(`/clientes/${p.cliente_id}/pendiente-total`)
+    .then((res) => Number(res.data?.pendiente_total ?? 0))
+
+  pendienteTotalCliente.value = totalPendCliente
   pagoForm.value = { importe: Math.round(totalPendCliente * 100) / 100, fecha_pago: today(), notas: '' }
   pagoError.value = ''
   pagoSuccess.value = ''
@@ -441,6 +435,11 @@ async function registrarPago() {
     })
     pagoSuccess.value = `Pago registrado. ${result.sobrante > 0 ? `Sobrante no aplicado: ${formatMoney(result.sobrante)}` : ''}`
     await loadPagos(currentPage.value)
+    if (pagoTarget.value?.cliente_id) {
+      pendienteTotalCliente.value = await api
+        .get(`/clientes/${pagoTarget.value.cliente_id}/pendiente-total`)
+        .then((res) => Number(res.data?.pendiente_total ?? 0))
+    }
   } catch (e) {
     pagoError.value = e.displayMessage || 'Error al registrar el pago'
   } finally {

@@ -19,6 +19,7 @@ Route::get('logo', function () {
 });
 
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
+Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
 Route::apiResource('clientes', ClienteController::class);
 
 // Trasteros

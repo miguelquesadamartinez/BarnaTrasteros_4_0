@@ -109,4 +109,18 @@ class ClienteController extends Controller
 
         return response()->json(['message' => 'Cliente eliminado correctamente']);
     }
+
+    public function pendienteTotal(Request $request, int $id): JsonResponse
+    {
+        $cliente = Cliente::findOrFail($id);
+        // Calculamos el total pendiente del cliente en TODOS sus pagos (pisos + trasteros)
+        $totalPendiente = $cliente->pagosAlquiler()
+            ->whereIn('estado', ['pendiente', 'parcial'])
+            ->get()
+            ->reduce(function ($carry, $pago) {
+                return $carry + max(0, $pago->importe_total - $pago->pagado);
+            }, 0);
+
+        return response()->json(['pendiente_total' => round($totalPendiente, 2)]);
+    }
 }
