@@ -159,7 +159,7 @@ export function usePdfRecibo() {
     ]
     if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
     const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
-    doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}_id${detalle.id}.pdf`)
+    doc.save(`Recibo_alquiler_${pago.tipo}_ref_${pago.referencia_id}_${pago.mes}-${pago.anyo}_id_${detalle.id}.pdf`)
   }
 
   async function generarReciboGasto(gasto, detalle) {
@@ -175,7 +175,7 @@ export function usePdfRecibo() {
     ]
     if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
     const doc = await buildPdf('RECIBO DE GASTO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
-    doc.save(`recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
+    doc.save(`Recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
 
   // eMiKi
@@ -192,7 +192,7 @@ export function usePdfRecibo() {
     ]
     if (pago.notas) conceptoRows.push(['Notas', pago.notas, ''])
     const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, pago.importe_total)
-    doc.save(`recibo_alquiler_${pago.tipo}_ref${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
+    doc.save(`Recibo_alquiler_${pago.tipo}_ref_${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
   }
 
   async function generarReciboGastoTotal(gasto) {
@@ -210,7 +210,7 @@ export function usePdfRecibo() {
     ]
     if (gasto.notas) conceptoRows.push(['Notas', gasto.notas, ''])
     const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, gasto.importe_total)
-    doc.save(`recibo_gasto_${gasto.id}_${gasto.tipo}.pdf`)
+    doc.save(`Recibo_gasto_${gasto.id}_${gasto.tipo}.pdf`)
   }
 
   /**
