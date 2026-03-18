@@ -130,8 +130,8 @@
           </div>
         </div>
 
-        <hr style="margin: 1rem 0; border-color: var(--gris-borde)" />
-        <p style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
+        <hr v-if="editing" style="margin: 1rem 0; border-color: var(--gris-borde)" />
+        <p v-if="editing" style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
           <strong>Propiedades asociadas</strong> — Edita el trastero o piso directamente desde aquí.
         </p>
 
