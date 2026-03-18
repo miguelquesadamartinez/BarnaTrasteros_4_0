@@ -101,7 +101,7 @@ class GenerarPagosMensuales implements ShouldQueue
         $destinatario = (string) config('mail.reportes.pagos_to', 'miguel.quesada.martinez.1975@gmail.com');
 
         Mail::to($destinatario)
-            //->cc('nieves.martinez.lloret@hotmail.es')
+            ->cc('nieves.martinez.lloret@hotmail.es')
             ->queue(
             new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
         );
