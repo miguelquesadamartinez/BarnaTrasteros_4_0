@@ -102,11 +102,11 @@
             </tr>
             <!-- Totales -->
             <tr class="totals-row" v-if="store.pagos.length > 0">
-              <td colspan="3" class="text-right"><strong>Totales:</strong></td>
+              <td colspan="4" class="text-right"><strong>Totales:</strong></td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + +p.importe_total, 0)) }}</td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + +p.pagado, 0)) }}</td>
               <td>{{ formatMoney(store.pagos.reduce((s, p) => s + pendiente(p), 0)) }}</td>
-              <td colspan="3"></td>
+              <td colspan="2"></td>
             </tr>
           </tbody>
         </table>
