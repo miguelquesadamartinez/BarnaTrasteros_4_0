@@ -115,4 +115,8 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    'reportes' => [
+        'pagos_to' => env('REPORT_PAGOS_EMAIL', 'miguel.quesada.martinez.1975@gmail.com'),
+    ],
+
 ];

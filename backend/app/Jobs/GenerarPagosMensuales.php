@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Mail\ReportePagosGeneradosMail;
 use App\Models\PagoAlquiler;
 use App\Models\Piso;
 use App\Models\Trastero;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class GenerarPagosMensuales implements ShouldQueue
 {
@@ -32,6 +34,7 @@ class GenerarPagosMensuales implements ShouldQueue
         Log::info("GenerarPagosMensuales: Generando pagos para {$this->mes}/{$this->anyo}");
 
         $generados = 0;
+        $pagosGeneradosIds = [];
 
         // Generar pagos para trasteros alquilados
         $trasteros = Trastero::whereNotNull('cliente_id')->get();
@@ -43,7 +46,7 @@ class GenerarPagosMensuales implements ShouldQueue
                 ->exists();
 
             if (!$existe) {
-                PagoAlquiler::create([
+                $pago = PagoAlquiler::create([
                     'cliente_id'    => $trastero->cliente_id,
                     'tipo'          => 'trastero',
                     'referencia_id' => $trastero->id,
@@ -54,6 +57,7 @@ class GenerarPagosMensuales implements ShouldQueue
                     'pagado'        => 0,
                     'estado'        => 'pendiente',
                 ]);
+                $pagosGeneradosIds[] = $pago->id;
                 $generados++;
             }
         }
@@ -68,7 +72,7 @@ class GenerarPagosMensuales implements ShouldQueue
                 ->exists();
 
             if (!$existe) {
-                PagoAlquiler::create([
+                $pago = PagoAlquiler::create([
                     'cliente_id'    => $piso->cliente_id,
                     'tipo'          => 'piso',
                     'referencia_id' => $piso->id,
@@ -79,9 +83,33 @@ class GenerarPagosMensuales implements ShouldQueue
                     'pagado'        => 0,
                     'estado'        => 'pendiente',
                 ]);
+                $pagosGeneradosIds[] = $pago->id;
                 $generados++;
             }
         }
+
+        $pagosGenerados = PagoAlquiler::with('cliente')
+            ->whereIn('id', $pagosGeneradosIds)
+            ->orderBy('tipo')
+            ->orderBy('numero')
+            ->get();
+
+        $totalImporte = (float) $pagosGenerados->sum(function (PagoAlquiler $pago): float {
+            return (float) $pago->importe_total;
+        });
+
+        $destinatario = (string) config('mail.reportes.pagos_to', 'miguel.quesada.martinez.1975@gmail.com');
+
+        Mail::to($destinatario)
+            //->cc('nieves.martinez.lloret@hotmail.es')
+            ->queue(
+            new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
+        );
+
+        Log::info(
+            "GenerarPagosMensuales: Reporte encolado para {$destinatario} con {$pagosGenerados->count()} pagos (total {$totalImporte})"
+        );
+
 
         Log::info("GenerarPagosMensuales: {$generados} registros generados para {$this->mes}/{$this->anyo}");
     }
