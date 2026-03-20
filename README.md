@@ -191,8 +191,11 @@ docker compose exec backend php artisan db:restore
 docker compose exec backend php artisan db:restore backup_2026-03-03_23-00-00.sql.gz
 ```
 
+## Storage link
 
----
+```bash
+docker compose exec backend php artisan storage:link --force
+```
 
 ## Estructura del proyecto
 
@@ -457,5 +460,45 @@ En este proyecto se ejecuta en cada arranque del contenedor `backend` (en el `CM
 
 ### Correcciones de UI
 - **Formato de fechas en Relatorios**: las columnas "Desde" (trasteros y pisos), "Emisión" y "Vencimiento" (gastos) ahora muestran `YYYY-MM-DD` en vez del timestamp ISO completo `YYYY-MM-DDTHH:mm:ss.SSSSSSZ`.
+
+---
+
+## Por qué el Dockerfile usa `php-fpm` en vez de `php artisan serve`
+
+### `php artisan serve` — solo para desarrollo local
+
+Es un servidor web minimalista incluido en Laravel, pensado exclusivamente para desarrollo local. Procesa las peticiones de forma **mono-proceso y secuencial**: no puede gestionar múltiples solicitudes simultáneas de forma eficiente y no está pensado para producción.
+
+### `php-fpm` (FastCGI Process Manager) — estándar de producción
+
+Es un gestor de procesos PHP robusto y multi-proceso. Gestiona un pool de workers PHP que atienden las peticiones en paralelo. Es el estándar en todos los entornos de producción.
+
+### Arquitectura en este proyecto
+
+En Docker, el backend usa dos contenedores que trabajan juntos:
+
+```
+Petición HTTP
+      │
+      ▼
+┌─────────────┐     protocolo FastCGI     ┌──────────────────┐
+│    Nginx    │ ────────────────────────▶│    PHP-FPM       │
+│  (tráfico)  │◀─────────────────────────│  (lógica PHP)    │
+└─────────────┘                           └──────────────────┘
+```
+
+- **Nginx** recibe las peticiones HTTP, sirve los archivos estáticos directamente (CSS, JS, imágenes) y delega las peticiones PHP a php-fpm mediante el protocolo FastCGI.
+- **PHP-FPM** procesa el código Laravel y devuelve la respuesta a Nginx.
+
+### Comparativa
+
+| | `php artisan serve` | `php-fpm` |
+|---|---|---|
+| **Uso** | Desarrollo local | Producción |
+| **Concurrencia** | 1 petición a la vez | Múltiples workers en paralelo |
+| **Rendimiento** | Bajo | Alto |
+| **Servidor web** | Integrado (básico) | Nginx/Apache por delante |
+| **Archivos estáticos** | Los sirve PHP (lento) | Los sirve Nginx directamente |
+| **Escalabilidad** | No | Configurable (`pm.max_children`) |
 
 ---
