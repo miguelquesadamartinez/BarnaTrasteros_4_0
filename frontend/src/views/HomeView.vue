@@ -108,22 +108,14 @@
           </table>
         </div>
 
-        <!-- Paginación -->
-        <div v-if="pendPagination.last_page > 1" style="display:flex;align-items:center;justify-content:center;gap:.5rem;padding:1rem 0;flex-wrap:wrap">
-          <button
-            class="btn btn-secondary btn-sm"
-            :disabled="pendPage === 1"
-            @click="loadPendientes(pendPage - 1)"
-          >‹ Anterior</button>
-          <span class="text-muted" style="font-size:.9rem">
-            Página {{ pendPage }} / {{ pendPagination.last_page }}
-          </span>
-          <button
-            class="btn btn-secondary btn-sm"
-            :disabled="pendPage === pendPagination.last_page"
-            @click="loadPendientes(pendPage + 1)"
-          >Siguiente ›</button>
-        </div>
+        <AppPagination
+          :current-page="pendPage"
+          :last-page="pendPagination.last_page"
+          :total="pendPagination.total"
+          :from="pendPagination.from"
+          :to="pendPagination.to"
+          @change="loadPendientes"
+        />
       </div>
     </template>
 
@@ -218,6 +210,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
 import AppModal from '@/components/AppModal.vue'
+import AppPagination from '@/components/AppPagination.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
 const { generarReciboPago, generarReciboPagoTotal } = usePdfRecibo()
@@ -232,7 +225,7 @@ const pendError      = ref('')
 const pendSearch     = ref('')
 const pendTipo       = ref('')
 const pendPage       = ref(1)
-const pendPagination = ref({ total: 0, last_page: 1 })
+const pendPagination = ref({ total: 0, last_page: 1, from: 0, to: 0 })
 
 // Modales
 const showPagoModal    = ref(false)
@@ -276,7 +269,7 @@ async function loadPendientes(page = 1) {
     if (pendTipo.value)   params.tipo    = pendTipo.value
     const { data } = await api.get('/pagos-alquiler', { params })
     pendPagos.value      = data.data
-    pendPagination.value = { total: data.total, last_page: data.last_page }
+    pendPagination.value = { total: data.total, last_page: data.last_page, from: data.from, to: data.to }
   } catch (e) {
     pendError.value = 'Error al cargar pagos pendientes'
   } finally {
