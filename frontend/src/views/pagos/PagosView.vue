@@ -96,7 +96,7 @@
                   >💰 Pagar</button>
                   <button class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
-                  <button class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
+                  <button v-if="p.estado === 'pendiente'" class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
                 </div>
               </td>
             </tr>
