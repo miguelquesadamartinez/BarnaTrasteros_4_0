@@ -9,6 +9,7 @@ use App\Models\Piso;
 use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class RelatorioController extends Controller
 {
@@ -17,33 +18,37 @@ class RelatorioController extends Controller
      */
     public function estadoTrasteros(): JsonResponse
     {
-        $trasteros = Trastero::with('cliente')->orderBy('numero')->get();
+        $data = Cache::tags(['relatorio', 'trasteros', 'clientes'])->remember('relatorio:estado-trasteros', now()->addHours(24), function () {
+            $trasteros = Trastero::with('cliente')->orderBy('numero')->get();
 
-        $lista = $trasteros->map(function ($t) {
+            $lista = $trasteros->map(function ($t) {
+                return [
+                    'id'                    => $t->id,
+                    'numero'                => $t->numero,
+                    'piso'                  => $t->piso,
+                    'tamanyo'               => $t->tamanyo,
+                    'precio_mensual'        => $t->precio_mensual,
+                    'cliente_id'            => $t->cliente_id,
+                    'cliente'               => $t->cliente ? [
+                        'id'       => $t->cliente->id,
+                        'nombre'   => $t->cliente->nombre,
+                        'apellido' => $t->cliente->apellido,
+                        'dni'      => $t->cliente->dni,
+                        'telefono' => $t->cliente->telefono,
+                    ] : null,
+                    'fecha_inicio_alquiler' => $t->fecha_inicio_alquiler,
+                ];
+            });
+
             return [
-                'id'                    => $t->id,
-                'numero'                => $t->numero,
-                'piso'                  => $t->piso,
-                'tamanyo'               => $t->tamanyo,
-                'precio_mensual'        => $t->precio_mensual,
-                'cliente_id'            => $t->cliente_id,
-                'cliente'               => $t->cliente ? [
-                    'id'       => $t->cliente->id,
-                    'nombre'   => $t->cliente->nombre,
-                    'apellido' => $t->cliente->apellido,
-                    'dni'      => $t->cliente->dni,
-                    'telefono' => $t->cliente->telefono,
-                ] : null,
-                'fecha_inicio_alquiler' => $t->fecha_inicio_alquiler,
+                'total'      => $trasteros->count(),
+                'alquilados' => $trasteros->whereNotNull('cliente_id')->count(),
+                'libres'     => $trasteros->whereNull('cliente_id')->count(),
+                'lista'      => $lista,
             ];
         });
 
-        return response()->json([
-            'total'      => $trasteros->count(),
-            'alquilados' => $trasteros->whereNotNull('cliente_id')->count(),
-            'libres'     => $trasteros->whereNull('cliente_id')->count(),
-            'lista'      => $lista,
-        ]);
+        return response()->json($data);
     }
 
     /**
@@ -51,32 +56,36 @@ class RelatorioController extends Controller
      */
     public function estadoPisos(): JsonResponse
     {
-        $pisos = Piso::with('cliente')->orderBy('numero')->get();
+        $data = Cache::tags(['relatorio', 'pisos', 'clientes'])->remember('relatorio:estado-pisos', now()->addHours(24), function () {
+            $pisos = Piso::with('cliente')->orderBy('numero')->get();
 
-        $lista = $pisos->map(function ($p) {
+            $lista = $pisos->map(function ($p) {
+                return [
+                    'id'                    => $p->id,
+                    'numero'                => $p->numero,
+                    'piso'                  => $p->piso,
+                    'precio_mensual'        => $p->precio_mensual,
+                    'cliente_id'            => $p->cliente_id,
+                    'cliente'               => $p->cliente ? [
+                        'id'       => $p->cliente->id,
+                        'nombre'   => $p->cliente->nombre,
+                        'apellido' => $p->cliente->apellido,
+                        'dni'      => $p->cliente->dni,
+                        'telefono' => $p->cliente->telefono,
+                    ] : null,
+                    'fecha_inicio_alquiler' => $p->fecha_inicio_alquiler,
+                ];
+            });
+
             return [
-                'id'                    => $p->id,
-                'numero'                => $p->numero,
-                'piso'                  => $p->piso,
-                'precio_mensual'        => $p->precio_mensual,
-                'cliente_id'            => $p->cliente_id,
-                'cliente'               => $p->cliente ? [
-                    'id'       => $p->cliente->id,
-                    'nombre'   => $p->cliente->nombre,
-                    'apellido' => $p->cliente->apellido,
-                    'dni'      => $p->cliente->dni,
-                    'telefono' => $p->cliente->telefono,
-                ] : null,
-                'fecha_inicio_alquiler' => $p->fecha_inicio_alquiler,
+                'total'      => $pisos->count(),
+                'alquilados' => $pisos->whereNotNull('cliente_id')->count(),
+                'libres'     => $pisos->whereNull('cliente_id')->count(),
+                'lista'      => $lista,
             ];
         });
 
-        return response()->json([
-            'total'      => $pisos->count(),
-            'alquilados' => $pisos->whereNotNull('cliente_id')->count(),
-            'libres'     => $pisos->whereNull('cliente_id')->count(),
-            'lista'      => $lista,
-        ]);
+        return response()->json($data);
     }
 
     /**
@@ -84,30 +93,36 @@ class RelatorioController extends Controller
      */
     public function estadoPagos(Request $request): JsonResponse
     {
-        $query = PagoAlquiler::with('cliente');
+        $cacheKey = 'relatorio:estado-pagos:' . md5(serialize($request->only(['anyo', 'mes', 'estado'])));
 
-        if ($request->filled('anyo')) {
-            $query->where('anyo', $request->anyo);
-        }
-        if ($request->filled('mes')) {
-            $query->where('mes', $request->mes);
-        }
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
+        $data = Cache::tags(['relatorio', 'pagos-alquiler', 'clientes'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = PagoAlquiler::with('cliente');
 
-        $pagos = $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->orderBy('tipo')->get();
+            if ($request->filled('anyo')) {
+                $query->where('anyo', $request->anyo);
+            }
+            if ($request->filled('mes')) {
+                $query->where('mes', $request->mes);
+            }
+            if ($request->filled('estado')) {
+                $query->where('estado', $request->estado);
+            }
 
-        $totalPendiente = $pagos->whereIn('estado', ['pendiente', 'parcial'])
-            ->sum(fn($p) => $p->importe_total - $p->pagado);
+            $pagos = $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->orderBy('tipo')->get();
 
-        return response()->json([
-            'total'           => $pagos->count(),
-            'pendientes'      => $pagos->whereIn('estado', ['pendiente', 'parcial'])->count(),
-            'pagados'         => $pagos->where('estado', 'pagado')->count(),
-            'total_pendiente' => round($totalPendiente, 2),
-            'lista'           => $pagos,
-        ]);
+            $totalPendiente = $pagos->whereIn('estado', ['pendiente', 'parcial'])
+                ->sum(fn($p) => $p->importe_total - $p->pagado);
+
+            return [
+                'total'           => $pagos->count(),
+                'pendientes'      => $pagos->whereIn('estado', ['pendiente', 'parcial'])->count(),
+                'pagados'         => $pagos->where('estado', 'pagado')->count(),
+                'total_pendiente' => round($totalPendiente, 2),
+                'lista'           => $pagos,
+            ];
+        });
+
+        return response()->json($data);
     }
 
     /**
@@ -115,33 +130,39 @@ class RelatorioController extends Controller
      */
     public function estadoGastos(Request $request): JsonResponse
     {
-        $query = Gasto::with(['detalles', 'imagenes']);
+        $cacheKey = 'relatorio:estado-gastos:' . md5(serialize($request->only(['tipo', 'estado'])));
 
-        if ($request->filled('tipo')) {
-            $query->where('tipo', $request->tipo);
-        }
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
+        $data = Cache::tags(['relatorio', 'gastos'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = Gasto::with(['detalles', 'imagenes']);
 
-        $gastos = $query->orderBy('fecha_emision', 'desc')->get();
+            if ($request->filled('tipo')) {
+                $query->where('tipo', $request->tipo);
+            }
+            if ($request->filled('estado')) {
+                $query->where('estado', $request->estado);
+            }
 
-        $gastos->each(function ($gasto) {
-            $gasto->imagenes->each(function ($imagen) {
-                $imagen->url = url('storage/' . $imagen->ruta);
+            $gastos = $query->orderBy('fecha_emision', 'desc')->get();
+
+            $gastos->each(function ($gasto) {
+                $gasto->imagenes->each(function ($imagen) {
+                    $imagen->url = url('storage/' . $imagen->ruta);
+                });
             });
+
+            $totalPendiente = $gastos->whereIn('estado', ['pendiente', 'parcial'])
+                ->sum(fn($g) => $g->importe_total - $g->pagado);
+
+            return [
+                'total'           => $gastos->count(),
+                'pendientes'      => $gastos->whereIn('estado', ['pendiente', 'parcial'])->count(),
+                'pagados'         => $gastos->where('estado', 'pagado')->count(),
+                'total_pendiente' => round($totalPendiente, 2),
+                'lista'           => $gastos,
+            ];
         });
 
-        $totalPendiente = $gastos->whereIn('estado', ['pendiente', 'parcial'])
-            ->sum(fn($g) => $g->importe_total - $g->pagado);
-
-        return response()->json([
-            'total'           => $gastos->count(),
-            'pendientes'      => $gastos->whereIn('estado', ['pendiente', 'parcial'])->count(),
-            'pagados'         => $gastos->where('estado', 'pagado')->count(),
-            'total_pendiente' => round($totalPendiente, 2),
-            'lista'           => $gastos,
-        ]);
+        return response()->json($data);
     }
 
     /**
@@ -149,35 +170,39 @@ class RelatorioController extends Controller
      */
     public function resumenGeneral(): JsonResponse
     {
-        $totalTrasteros  = Trastero::count();
-        $trasterosLibres = Trastero::whereNull('cliente_id')->count();
-        $trasterosAlquilados = $totalTrasteros - $trasterosLibres;
+        $data = Cache::tags(['relatorio', 'trasteros', 'pisos', 'pagos-alquiler', 'gastos'])->remember('relatorio:resumen-general', now()->addHours(24), function () {
+            $totalTrasteros      = Trastero::count();
+            $trasterosLibres     = Trastero::whereNull('cliente_id')->count();
+            $trasterosAlquilados = $totalTrasteros - $trasterosLibres;
 
-        $totalPisos  = Piso::count();
-        $pisosLibres = Piso::whereNull('cliente_id')->count();
-        $pisosAlquilados = $totalPisos - $pisosLibres;
+            $totalPisos      = Piso::count();
+            $pisosLibres     = Piso::whereNull('cliente_id')->count();
+            $pisosAlquilados = $totalPisos - $pisosLibres;
 
-        $pagosPendientes = PagoAlquiler::whereIn('estado', ['pendiente', 'parcial'])
-            ->selectRaw('SUM(importe_total - pagado) as total_pendiente')
-            ->value('total_pendiente') ?? 0;
+            $pagosPendientes = PagoAlquiler::whereIn('estado', ['pendiente', 'parcial'])
+                ->selectRaw('SUM(importe_total - pagado) as total_pendiente')
+                ->value('total_pendiente') ?? 0;
 
-        $gastosPendientes = Gasto::whereIn('estado', ['pendiente', 'parcial'])
-            ->selectRaw('SUM(importe_total - pagado) as total_pendiente')
-            ->value('total_pendiente') ?? 0;
+            $gastosPendientes = Gasto::whereIn('estado', ['pendiente', 'parcial'])
+                ->selectRaw('SUM(importe_total - pagado) as total_pendiente')
+                ->value('total_pendiente') ?? 0;
 
-        return response()->json([
-            'trasteros' => [
-                'total'      => $totalTrasteros,
-                'alquilados' => $trasterosAlquilados,
-                'libres'     => $trasterosLibres,
-            ],
-            'pisos' => [
-                'total'      => $totalPisos,
-                'alquilados' => $pisosAlquilados,
-                'libres'     => $pisosLibres,
-            ],
-            'pagos_pendientes'  => round($pagosPendientes, 2),
-            'gastos_pendientes' => round($gastosPendientes, 2),
-        ]);
+            return [
+                'trasteros' => [
+                    'total'      => $totalTrasteros,
+                    'alquilados' => $trasterosAlquilados,
+                    'libres'     => $trasterosLibres,
+                ],
+                'pisos' => [
+                    'total'      => $totalPisos,
+                    'alquilados' => $pisosAlquilados,
+                    'libres'     => $pisosLibres,
+                ],
+                'pagos_pendientes'  => round($pagosPendientes, 2),
+                'gastos_pendientes' => round($gastosPendientes, 2),
+            ];
+        });
+
+        return response()->json($data);
     }
 }

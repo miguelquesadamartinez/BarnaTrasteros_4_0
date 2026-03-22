@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 
 class MantenimientoController extends Controller
@@ -36,6 +37,8 @@ class MantenimientoController extends Controller
 
         GenerarPagosMensuales::dispatchSync($mes, $anyo);
 
+        Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
+
         // Contar registros después para informar cuántos se crearon
         $despues  = PagoAlquiler::where('mes', $mes)->where('anyo', $anyo)->count();
         $creados  = $despues - $antes;
@@ -57,19 +60,22 @@ class MantenimientoController extends Controller
      */
     public function listarBackups(): JsonResponse
     {
-        $dir   = base_path('mysql_bk');
-        $files = File::isDirectory($dir) ? glob($dir . '/*.sql.gz') : [];
+        $backups = Cache::remember('mantenimiento:backups', now()->addMinutes(5), function () {
+            $dir   = base_path('mysql_bk');
+            $files = File::isDirectory($dir) ? glob($dir . '/*.sql.gz') : [];
 
-        $backups = array_map(function ($path) {
-            return [
-                'filename' => basename($path),
-                'size_kb'  => round(filesize($path) / 1024, 1),
-                'fecha'    => date('Y-m-d H:i:s', filemtime($path)),
-            ];
-        }, $files);
+            $items = array_map(function ($path) {
+                return [
+                    'filename' => basename($path),
+                    'size_kb'  => round(filesize($path) / 1024, 1),
+                    'fecha'    => date('Y-m-d H:i:s', filemtime($path)),
+                ];
+            }, $files);
 
-        // Más reciente primero
-        usort($backups, fn($a, $b) => strcmp($b['fecha'], $a['fecha']));
+            usort($items, fn($a, $b) => strcmp($b['fecha'], $a['fecha']));
+
+            return $items;
+        });
 
         return response()->json($backups);
     }
@@ -86,6 +92,8 @@ class MantenimientoController extends Controller
         }
 
         $output = trim(Artisan::output());
+
+        Cache::forget('mantenimiento:backups');
 
         return response()->json([
             'ok'      => true,
@@ -137,6 +145,8 @@ class MantenimientoController extends Controller
         }
 
         unlink($filepath);
+
+        Cache::forget('mantenimiento:backups');
 
         return response()->json([
             'ok'      => true,

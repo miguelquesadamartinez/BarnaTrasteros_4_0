@@ -6,27 +6,32 @@ use App\Http\Controllers\Controller;
 use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TrasteroController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Trastero::with('cliente');
+        $cacheKey = 'trasteros:list:' . md5(serialize($request->only(['search', 'libre'])));
 
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('numero', 'like', "%{$search}%")
-                  ->orWhere('piso', 'like', "%{$search}%")
-                  ->orWhere('tamanyo', 'like', "%{$search}%");
-            });
-        }
+        $trasteros = Cache::tags(['trasteros'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = Trastero::with('cliente');
 
-        if ($request->has('libre') && $request->libre == '1') {
-            $query->whereNull('cliente_id');
-        }
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('numero', 'like', "%{$search}%")
+                      ->orWhere('piso', 'like', "%{$search}%")
+                      ->orWhere('tamanyo', 'like', "%{$search}%");
+                });
+            }
 
-        $trasteros = $query->orderBy('numero')->get();
+            if ($request->has('libre') && $request->libre == '1') {
+                $query->whereNull('cliente_id');
+            }
+
+            return $query->orderBy('numero')->get();
+        });
 
         return response()->json($trasteros);
     }
@@ -45,12 +50,18 @@ class TrasteroController extends Controller
 
         $trastero = Trastero::create($validated);
 
+        Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas'])->flush();
+
         return response()->json($trastero->load('cliente'), 201);
     }
 
     public function show(Trastero $trastero): JsonResponse
     {
-        return response()->json($trastero->load('cliente'));
+        $data = Cache::tags(['trasteros'])->remember("trasteros:show:{$trastero->id}", now()->addHours(24), function () use ($trastero) {
+            return $trastero->load('cliente');
+        });
+
+        return response()->json($data);
     }
 
     public function update(Request $request, Trastero $trastero): JsonResponse
@@ -67,12 +78,16 @@ class TrasteroController extends Controller
 
         $trastero->update($validated);
 
+        Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
+
         return response()->json($trastero->load('cliente'));
     }
 
     public function destroy(Trastero $trastero): JsonResponse
     {
         $trastero->delete();
+
+        Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json(['message' => 'Trastero eliminado correctamente']);
     }

@@ -6,36 +6,42 @@ use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Log;
 
 class ClienteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Cliente::with(['trasteros', 'pisos']);
+        $cacheKey = 'clientes:list:' . md5(serialize($request->only(['search', 'per_page', 'page'])));
 
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('apellido', 'like', "%{$search}%")
-                  ->orWhere('dni', 'like', "%{$search}%")
-                  ->orWhere('telefono', 'like', "%{$search}%");
-            });
-        }
+        $clientes = Cache::tags(['clientes'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = Cliente::with(['trasteros', 'pisos']);
 
-        $perPage = (int) $request->get('per_page', 15);
-        $clientes = $query->orderBy('apellido')->orderBy('nombre')->paginate($perPage);
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('nombre', 'like', "%{$search}%")
+                      ->orWhere('apellido', 'like', "%{$search}%")
+                      ->orWhere('dni', 'like', "%{$search}%")
+                      ->orWhere('telefono', 'like', "%{$search}%");
+                });
+            }
+
+            $perPage = $request->integer('per_page', 15);
+            return $query->orderBy('apellido')->orderBy('nombre')->paginate($perPage);
+        });
 
         return response()->json($clientes);
     }
 
     public function listAll(Request $request): JsonResponse
     {
-        $query = Cliente::with(['trasteros', 'pisos']);
-        $clientes = $query->orderBy('apellido')->orderBy('nombre')->get();
+        $clientes = Cache::tags(['clientes'])->remember('clientes:all', now()->addHours(24), function () {
+            return Cliente::with(['trasteros', 'pisos'])->orderBy('apellido')->orderBy('nombre')->get();
+        });
+
         return response()->json($clientes);
     }
 
@@ -62,12 +68,18 @@ class ClienteController extends Controller
 
         $cliente = Cliente::create($validated);
 
+        Cache::tags(['clientes'])->flush();
+
         return response()->json($cliente->load(['trasteros', 'pisos']), 201);
     }
 
     public function show(Cliente $cliente): JsonResponse
     {
-        return response()->json($cliente->load(['trasteros', 'pisos']));
+        $data = Cache::tags(['clientes'])->remember("clientes:show:{$cliente->id}", now()->addHours(24), function () use ($cliente) {
+            return $cliente->load(['trasteros', 'pisos']);
+        });
+
+        return response()->json($data);
     }
 
     public function update(Request $request, Cliente $cliente): JsonResponse
@@ -97,6 +109,8 @@ class ClienteController extends Controller
 
         $cliente->update($validated);
 
+        Cache::tags(['clientes', 'trasteros', 'pisos', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
+
         return response()->json($cliente->load(['trasteros', 'pisos']));
     }
 
@@ -107,20 +121,24 @@ class ClienteController extends Controller
         }
         $cliente->delete();
 
+        Cache::tags(['clientes', 'trasteros', 'pisos', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
+
         return response()->json(['message' => 'Cliente eliminado correctamente']);
     }
 
     public function pendienteTotal(Request $request, int $id): JsonResponse
     {
-        $cliente = Cliente::findOrFail($id);
-        // Calculamos el total pendiente del cliente en TODOS sus pagos (pisos + trasteros)
-        $totalPendiente = $cliente->pagosAlquiler()
-            ->whereIn('estado', ['pendiente', 'parcial'])
-            ->get()
-            ->reduce(function ($carry, $pago) {
-                return $carry + max(0, $pago->importe_total - $pago->pagado);
-            }, 0);
+        $pendiente = Cache::tags(['clientes', 'pagos-alquiler'])->remember("clientes:pendiente:{$id}", now()->addMinutes(10), function () use ($id) {
+            $cliente = Cliente::findOrFail($id);
+            return round(
+                $cliente->pagosAlquiler()
+                    ->whereIn('estado', ['pendiente', 'parcial'])
+                    ->get()
+                    ->reduce(fn ($carry, $pago) => $carry + max(0, $pago->importe_total - $pago->pagado), 0),
+                2
+            );
+        });
 
-        return response()->json(['pendiente_total' => round($totalPendiente, 2)]);
+        return response()->json(['pendiente_total' => $pendiente]);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Gasto;
 use App\Models\ImagenGasto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,24 +16,29 @@ class GastoController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Gasto::with(['detalles', 'imagenes']);
+        $cacheKey = 'gastos:list:' . md5(serialize($request->only(['tipo', 'estado', 'per_page', 'page'])));
 
-        if ($request->has('tipo') && $request->tipo) {
-            $query->where('tipo', $request->tipo);
-        }
+        $gastos = Cache::tags(['gastos'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = Gasto::with(['detalles', 'imagenes']);
 
-        if ($request->has('estado') && $request->estado) {
-            $query->where('estado', $request->estado);
-        }
+            if ($request->has('tipo') && $request->tipo) {
+                $query->where('tipo', $request->tipo);
+            }
 
-        $perPage = (int) $request->get('per_page', 15);
-        $gastos = $query->orderBy('fecha_emision', 'desc')->paginate($perPage);
+            if ($request->has('estado') && $request->estado) {
+                $query->where('estado', $request->estado);
+            }
 
-        // Añadir URL a las imágenes
-        $gastos->getCollection()->each(function ($gasto) {
-            $gasto->imagenes->each(function ($imagen) {
-                $imagen->url = url('storage/' . $imagen->ruta);
+            $perPage = $request->integer('per_page', 15);
+            $result = $query->orderBy('fecha_emision', 'desc')->paginate($perPage);
+
+            $result->getCollection()->each(function ($gasto) {
+                $gasto->imagenes->each(function ($imagen) {
+                    $imagen->url = url('storage/' . $imagen->ruta);
+                });
             });
+
+            return $result;
         });
 
         return response()->json($gastos);
@@ -77,6 +83,8 @@ class GastoController extends Controller
             return response()->json(['error' => 'Error al crear el gasto: ' . $e->getMessage()], 500);
         }
 
+        Cache::tags(['gastos', 'relatorio'])->flush();
+
         $gasto->load(['detalles', 'imagenes']);
         $gasto->imagenes->each(function ($imagen) {
             $imagen->url = url('storage/' . $imagen->ruta);
@@ -87,12 +95,15 @@ class GastoController extends Controller
 
     public function show(Gasto $gasto): JsonResponse
     {
-        $gasto->load(['detalles', 'imagenes']);
-        $gasto->imagenes->each(function ($imagen) {
-            $imagen->url = url('storage/' . $imagen->ruta);
+        $data = Cache::tags(['gastos'])->remember("gastos:show:{$gasto->id}", now()->addHours(24), function () use ($gasto) {
+            $gasto->load(['detalles', 'imagenes']);
+            $gasto->imagenes->each(function ($imagen) {
+                $imagen->url = url('storage/' . $imagen->ruta);
+            });
+            return $gasto;
         });
 
-        return response()->json($gasto);
+        return response()->json($data);
     }
 
     public function update(Request $request, Gasto $gasto): JsonResponse
@@ -111,6 +122,8 @@ class GastoController extends Controller
         $gasto->update($validated);
         $gasto->recalcularEstado();
 
+        Cache::tags(['gastos', 'relatorio'])->flush();
+
         $gasto->load(['detalles', 'imagenes']);
         $gasto->imagenes->each(function ($imagen) {
             $imagen->url = url('storage/' . $imagen->ruta);
@@ -126,6 +139,8 @@ class GastoController extends Controller
             Storage::disk('public')->delete($imagen->ruta);
         }
         $gasto->delete();
+
+        Cache::tags(['gastos', 'relatorio'])->flush();
 
         return response()->json(['message' => 'Gasto eliminado correctamente']);
     }
@@ -171,6 +186,8 @@ class GastoController extends Controller
             return response()->json(['error' => 'Error al registrar el pago: ' . $e->getMessage()], 500);
         }
 
+        Cache::tags(['gastos', 'relatorio'])->flush();
+
         $gasto->load(['detalles', 'imagenes']);
         $gasto->imagenes->each(function ($imagen) {
             $imagen->url = url('storage/' . $imagen->ruta);
@@ -201,6 +218,8 @@ class GastoController extends Controller
             $nuevas[] = $img;
         }
 
+        Cache::tags(['gastos'])->flush();
+
         return response()->json(['imagenes' => $nuevas]);
     }
 
@@ -211,6 +230,8 @@ class GastoController extends Controller
     {
         Storage::disk('public')->delete($imagen->ruta);
         $imagen->delete();
+
+        Cache::tags(['gastos'])->flush();
 
         return response()->json(['message' => 'Imagen eliminada']);
     }
@@ -236,6 +257,8 @@ class GastoController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Error al eliminar el detalle: ' . $e->getMessage()], 500);
         }
+
+        Cache::tags(['gastos', 'relatorio'])->flush();
 
         $gasto->load(['detalles', 'imagenes']);
         $gasto->imagenes->each(function ($imagen) {

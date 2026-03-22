@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -87,6 +88,8 @@ class GenerarPagosMensuales implements ShouldQueue
                 $generados++;
             }
         }
+
+        Cache::tags(['pagos-alquiler'])->flush();
 
         $pagosGenerados = PagoAlquiler::with('cliente')
             ->whereIn('id', $pagosGeneradosIds)

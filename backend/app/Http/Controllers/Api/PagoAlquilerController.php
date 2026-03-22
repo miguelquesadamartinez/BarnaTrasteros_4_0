@@ -7,62 +7,75 @@ use App\Models\DetallePagoAlquiler;
 use App\Models\PagoAlquiler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PagoAlquilerController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = PagoAlquiler::with(['cliente', 'detalles']);
+        $cacheKey = 'pagos:list:' . md5(serialize($request->only([
+            'tipo', 'referencia_id', 'cliente_id', 'cliente',
+            'estado', 'anyo', 'mes', 'per_page', 'page',
+        ])));
 
-        if ($request->has('tipo') && $request->tipo) {
-            $query->where('tipo', $request->tipo);
-        }
+        $pagos = Cache::tags(['pagos-alquiler'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = PagoAlquiler::with(['cliente', 'detalles']);
 
-        if ($request->has('referencia_id') && $request->referencia_id) {
-            $query->where('referencia_id', $request->referencia_id);
-        }
-
-        if ($request->has('cliente_id') && $request->cliente_id) {
-            $query->where('cliente_id', $request->cliente_id);
-        }
-
-        if ($request->filled('cliente')) {
-            $search = $request->cliente;
-            $query->whereHas('cliente', function ($q) use ($search) {
-                $q->whereRaw("CONCAT(nombre, ' ', apellido) LIKE ?", ["%{$search}%"])
-                  ->orWhere('nombre',   'like', "%{$search}%")
-                  ->orWhere('apellido', 'like', "%{$search}%")
-                  ->orWhere('dni',      'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('estado') && $request->estado) {
-            $estados = array_filter(array_map('trim', explode(',', $request->estado)));
-            if (count($estados) === 1) {
-                $query->where('estado', $estados[0]);
-            } else {
-                $query->whereIn('estado', $estados);
+            if ($request->has('tipo') && $request->tipo) {
+                $query->where('tipo', $request->tipo);
             }
-        }
 
-        if ($request->has('anyo') && $request->anyo) {
-            $query->where('anyo', $request->anyo);
-        }
+            if ($request->has('referencia_id') && $request->referencia_id) {
+                $query->where('referencia_id', $request->referencia_id);
+            }
 
-        if ($request->has('mes') && $request->mes) {
-            $query->where('mes', $request->mes);
-        }
+            if ($request->has('cliente_id') && $request->cliente_id) {
+                $query->where('cliente_id', $request->cliente_id);
+            }
 
-        $perPage = (int) $request->get('per_page', 15);
-        $pagos = $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->paginate($perPage);
+            if ($request->filled('cliente')) {
+                $search = $request->cliente;
+                $query->whereHas('cliente', function ($q) use ($search) {
+                    $q->whereRaw("CONCAT(nombre, ' ', apellido) LIKE ?", ["%{$search}%"])
+                      ->orWhere('nombre',   'like', "%{$search}%")
+                      ->orWhere('apellido', 'like', "%{$search}%")
+                      ->orWhere('dni',      'like', "%{$search}%");
+                });
+            }
+
+            if ($request->has('estado') && $request->estado) {
+                $estados = array_filter(array_map('trim', explode(',', $request->estado)));
+                if (count($estados) === 1) {
+                    $query->where('estado', $estados[0]);
+                } else {
+                    $query->whereIn('estado', $estados);
+                }
+            }
+
+            if ($request->has('anyo') && $request->anyo) {
+                $query->where('anyo', $request->anyo);
+            }
+
+            if ($request->has('mes') && $request->mes) {
+                $query->where('mes', $request->mes);
+            }
+
+            $perPage = $request->integer('per_page', 15);
+
+            return $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->paginate($perPage);
+        });
 
         return response()->json($pagos);
     }
 
     public function show(PagoAlquiler $pagoAlquiler): JsonResponse
     {
-        return response()->json($pagoAlquiler->load(['cliente', 'detalles']));
+        $data = Cache::tags(['pagos-alquiler'])->remember("pagos-alquiler:show:{$pagoAlquiler->id}", now()->addHours(24), function () use ($pagoAlquiler) {
+            return $pagoAlquiler->load(['cliente', 'detalles']);
+        });
+
+        return response()->json($data);
     }
 
     /**
@@ -138,6 +151,8 @@ class PagoAlquilerController extends Controller
 
             DB::commit();
 
+            Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
+
             return response()->json([
                 'message'            => 'Pago registrado correctamente',
                 'pagos_actualizados' => $pagosActualizados,
@@ -187,12 +202,16 @@ class PagoAlquilerController extends Controller
 
         $pago = PagoAlquiler::create($validated);
 
+        Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
+
         return response()->json($pago->load(['cliente', 'detalles']), 201);
     }
 
     public function destroy(PagoAlquiler $pagoAlquiler): JsonResponse
     {
         $pagoAlquiler->delete();
+
+        Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
 
         return response()->json(['message' => 'Registro de pago eliminado']);
     }
@@ -215,6 +234,8 @@ class PagoAlquilerController extends Controller
             $pagoAlquiler->recalcularEstado(); // guarda internamente
 
             DB::commit();
+
+            Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
 
             return response()->json($pagoAlquiler->fresh(['cliente', 'detalles']));
         } catch (\Exception $e) {
