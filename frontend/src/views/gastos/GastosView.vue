@@ -108,7 +108,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Tipo *</label>
-            <select v-model="form.tipo" class="form-control" required>
+            <select v-model="form.tipo" class="form-control" required @change="onTipoChange">
               <option value="">Selecciona...</option>
               <option value="agua">💧 Agua</option>
               <option value="luz">⚡ Luz</option>
@@ -319,6 +319,19 @@ const detalleGastoError     = ref('')
 
 const TIPOS = { agua: '💧 Agua', luz: '⚡ Luz', comunidad: '🏘️ Comunidad', mantenimiento: '🔧 Mantenimiento', otro: '📄 Otro' }
 function tipoLabel(t) { return TIPOS[t] || t }
+
+const DESCRIPCION_POR_TIPO = {
+  agua: 'Factura de agua',
+  luz: 'Factura de luz',
+  comunidad: 'Cuota de comunidad',
+  mantenimiento: 'Factura de mantenimiento',
+  otro: 'Otro',
+}
+function onTipoChange() {
+  if (!editTarget.value && DESCRIPCION_POR_TIPO[form.value.tipo]) {
+    form.value.descripcion = DESCRIPCION_POR_TIPO[form.value.tipo]
+  }
+}
 
 const defaultForm = () => ({
   tipo: '',
