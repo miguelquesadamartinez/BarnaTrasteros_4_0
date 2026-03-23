@@ -3,12 +3,13 @@
     <nav class="navbar">
       <router-link to="/" class="navbar-brand">BarnaTrasteros</router-link>
       <ul class="navbar-menu">
-        <li><router-link to="/trasteros">Trasteros</router-link></li>
-        <li><router-link to="/pisos">Pisos</router-link></li>
-        <li><router-link to="/clientes">Clientes</router-link></li>
-        <li><router-link to="/pagos">Pagos</router-link></li>
-        <li><router-link to="/gastos">Gastos</router-link></li>
-        <li><router-link to="/relatorios">Relatorios</router-link></li>
+        <li><router-link to="/trasteros">📦 Trasteros</router-link></li>
+        <li><router-link to="/pisos">🏠 Pisos</router-link></li>
+        <li><router-link to="/clientes">👥 Clientes</router-link></li>
+        <li><router-link to="/pagos">💳 Pagos</router-link></li>
+        <li><router-link to="/gastos">🧾 Gastos</router-link></li>
+        <li><router-link to="/mantenimiento/facturas">🧾 Facturas</router-link></li>
+        <li><router-link to="/relatorios">📊 Relatorios</router-link></li>
         <li class="nav-dropdown" :class="{ open: dropdownOpen }">
           <button class="nav-dropdown-toggle" @click="dropdownOpen = !dropdownOpen">⚙️ Mantenimiento ▾</button>
           <ul class="nav-dropdown-menu">
