@@ -905,4 +905,8 @@ cd backend
 composer require predis/predis
 ```
 
+## Instalacion redis
+
+```bash
+docker compose exec backend composer require predis/predis
 ---
