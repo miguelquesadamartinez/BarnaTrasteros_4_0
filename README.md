@@ -909,4 +909,12 @@ composer require predis/predis
 
 ```bash
 docker compose exec backend composer require predis/predis
+```
+---
+
+## Instalacion toastification
+
+```bash
+docker compose exec frontend npm install vue-toastification@2.0.0-rc.2
+```
 ---
