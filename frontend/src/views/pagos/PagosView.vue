@@ -62,7 +62,7 @@
               <th>Pagado</th>
               <th>Pendiente</th>
               <th>Estado</th>
-              <th>Acciones</th>
+                <th style="text-align:center">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -87,7 +87,7 @@
                 <span class="badge" :class="estadoBadge(p.estado)">{{ p.estado }}</span>
               </td>
               <td>
-                <div class="actions-cell">
+                <div class="actions-cell" style="display:flex; flex-direction:row; align-items:center; justify-content:center; gap:0.4rem;">
                   <button
                     v-if="p.estado !== 'pagado'"
                     class="btn btn-success btn-sm"
@@ -96,6 +96,12 @@
                   >💰 Pagar</button>
                   <button class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
+                  <button
+                    v-if="p.cliente && p.cliente.email"
+                    class="btn btn-success btn-sm"
+                    title="Enviar recibo por email"
+                    @click="enviarReciboPagoEmail(p)"
+                  >✉️</button>
                   <button v-if="p.estado === 'pendiente'" class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
                 </div>
               </td>
@@ -163,19 +169,18 @@
               <tr>
                 <th>Fecha</th>
                 <th>Importe</th>
-                <th>Notas</th>
                 <th>Recibo</th>
-                <th></th>
+                <th style="text-align:center">Enviar email</th>
+                <th style="text-align:center">Eliminar pago</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!detalleTarget.detalles?.length">
-                <td colspan="5" class="text-center text-muted">Sin pagos registrados</td>
+                <td colspan="6" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
                 <td>{{ formatDate(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
-                <td>{{ d.notas || '—' }}</td>
                 <td>
                   <button
                     class="btn btn-secondary btn-sm"
@@ -183,14 +188,24 @@
                     @click="descargarReciboPago(detalleTarget, d)"
                   >📄 PDF</button>
                 </td>
-                <td>
+                <td style="text-align:center;">
+                  <button
+                    v-if="detalleTarget.cliente && detalleTarget.cliente.email"
+                    class="btn btn-success btn-sm"
+                    style="margin:0 auto; display:block;"
+                    title="Enviar recibo por email"
+                    @click="enviarReciboDetalleEmail(detalleTarget, d)"
+                  >✉️</button>
+                </td>
+                <td style="text-align:center;">
                   <button
                     v-if="deleteDetalleId !== d.id"
                     class="btn btn-danger btn-sm"
+                    style="margin:0 auto; display:block;"
                     title="Eliminar este detalle"
                     @click="deleteDetalleId = d.id"
                   >🗑️</button>
-                  <span v-else style="display:inline-flex;gap:.35rem;align-items:center">
+                  <span v-else style="display:inline-flex;gap:.35rem;align-items:center; justify-content:center;">
                     <span style="font-size:.8rem;color:#b00">¿Seguro?</span>
                     <button class="btn btn-danger btn-sm" :disabled="deletingDetalle" @click="doEliminarDetalle(d)">
                       {{ deletingDetalle ? '...' : '✓' }}
@@ -278,7 +293,9 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+
 import api from '@/api'
+import { useToast } from 'vue-toastification'
 
 const store = usePagosStore()
 const clientesStore = useClientesStore()
@@ -480,4 +497,24 @@ onMounted(() => {
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })
+
+// --- Lógica para enviar recibo por email ---
+const toast = useToast()
+async function enviarReciboPagoEmail(pago) {
+  try {
+    await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id })
+    toast.success('Recibo enviado por email correctamente')
+  } catch (e) {
+    toast.error(e.displayMessage || 'Error al enviar el email')
+  }
+}
+
+async function enviarReciboDetalleEmail(pago, detalle) {
+  try {
+    await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id, detalle_id: detalle.id })
+    toast.success('Recibo enviado por email correctamente')
+  } catch (e) {
+    toast.error(e.displayMessage || 'Error al enviar el email')
+  }
+}
 </script>

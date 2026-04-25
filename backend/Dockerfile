@@ -1,6 +1,7 @@
 FROM php:8.2-fpm
 
 # Install system dependencies
+
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -12,7 +13,14 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     default-mysql-client \
     gzip \
+    locales \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache
+
+# Instalar y configurar locale español
+RUN echo "es_ES.UTF-8 UTF-8" > /etc/locale.gen && locale-gen
+ENV LANG es_ES.UTF-8
+ENV LANGUAGE es_ES:es
+ENV LC_ALL es_ES.UTF-8
 
 # Configure OPcache for performance
 RUN { \

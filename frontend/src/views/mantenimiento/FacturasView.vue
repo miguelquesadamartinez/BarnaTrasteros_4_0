@@ -64,13 +64,22 @@
             </div>
           </div>
           <div class="factura-card-footer">
-            <div class="factura-totales">
-              <span class="text-muted" style="font-size:.8rem">Total</span>
-              <strong>{{ formatMoney(f.importe_total) }}</strong>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%;">
+                <div class="factura-totales">
+                  <span class="text-muted" style="font-size:.8rem">Total</span>
+                  <strong>{{ formatMoney(f.importe_total) }}</strong>
+                </div>
+                <button class="btn btn-primary btn-sm" @click="descargar(f)">
+                  📄 Descargar PDF
+                </button>
+              </div>
+              <button class="btn btn-success" style="width:100%;font-size:1.1rem;padding:.75rem 0;display:flex;align-items:center;justify-content:center;gap:0.5rem;" @click="enviarFacturaEmail(f)">
+                <span style="font-size:1.2em;">📧</span>
+                <span>Enviar factura por email</span>
+              </button>
             </div>
-            <button class="btn btn-primary btn-sm" @click="descargar(f)">
-              📄 Descargar PDF
-            </button>
+          <!-- código eliminado: fragmento JS accidentalmente pegado en el template -->
           </div>
         </div>
       </div>
@@ -82,12 +91,28 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+import { useToast } from 'vue-toastification'
 
+const toast = useToast()
 const { generarFacturaCliente } = usePdfRecibo()
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 function mesNombre(m) { return MESES[m] || m }
+
+async function enviarFacturaEmail(f) {
+  try {
+    const { data } = await api.post('/facturas/enviar-email', {
+      cliente_id: f.cliente.id,
+      mes: mes.value,
+      anyo: anyo.value
+    })
+    toast.success('Factura enviada por email correctamente')
+  } catch (e) {
+    console.error('Error al enviar email de factura:', e)
+    toast.error(e.displayMessage || 'Error al enviar el email')
+  }
+}
 
 const hoy = new Date()
 const mes  = ref(hoy.getMonth() + 1)

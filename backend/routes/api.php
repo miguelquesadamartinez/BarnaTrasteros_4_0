@@ -35,6 +35,7 @@ Route::get('pagos-alquiler/{pagoAlquiler}', [PagoAlquilerController::class, 'sho
 Route::delete('pagos-alquiler/{pagoAlquiler}', [PagoAlquilerController::class, 'destroy']);
 Route::post('pagos-alquiler/registrar-pago', [PagoAlquilerController::class, 'registrarPago']);
 Route::delete('pagos-alquiler/{pagoAlquiler}/detalles/{detalle}', [PagoAlquilerController::class, 'eliminarDetalle']);
+Route::post('pagos-alquiler/enviar-recibo-email', [PagoAlquilerController::class, 'enviarReciboEmail']);
 
 // Gastos
 Route::apiResource('gastos', GastoController::class);
@@ -60,6 +61,7 @@ Route::delete('tamanyo-trasteros/{tamanyoTrastero}', [TamanyoTrasteroController:
 
 // Facturas
 Route::get('facturas', [FacturaController::class, 'index']);
+Route::post('facturas/enviar-email', [FacturaController::class, 'enviarEmail']);
 
 // Mantenimiento - acciones
 Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);

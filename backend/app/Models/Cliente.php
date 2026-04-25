@@ -14,6 +14,7 @@ class Cliente extends Model
         'apellido',
         'telefono',
         'dni',
+        'email',
         'foto_dni',
         'direccion',
         'codigo_postal',

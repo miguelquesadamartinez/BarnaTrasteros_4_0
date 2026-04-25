@@ -100,6 +100,10 @@
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Email</label>
+          <input v-model="form.email" class="form-control" type="email" placeholder="cliente@email.com" />
+        </div>
+        <div class="form-group">
           <label class="form-label">Dirección</label>
           <input v-model="form.direccion" class="form-control" placeholder="Carrer de..., 123" />
         </div>
@@ -226,6 +230,7 @@ function fotoUrl(ruta) {
 
 const emptyForm = () => ({
   nombre: '', apellido: '', dni: '', telefono: '',
+  email: '',
   direccion: '', codigo_postal: '', ciudad: '', necesita_factura: false,
   foto_dni_file: null, foto_dni_preview: null,
   trastero_ids: [], piso_id: null,

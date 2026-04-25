@@ -9,6 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PagoAlquilerController extends Controller
 {
@@ -242,5 +244,69 @@ class PagoAlquilerController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Error al eliminar el detalle: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Enviar recibo de pago por email al cliente (pago mensual o detalle).
+     */
+    public function enviarReciboEmail(Request $request): JsonResponse
+    {
+        Log::debug("message");
+
+        //$cliente = null;
+        //if (!$cliente || !$cliente->email) {
+        //    return response()->json(['message' => 'El cliente no tiene email registrado 2'], 422);
+        //}
+
+        $request->validate([
+            'pago_id' => 'required|exists:pagos_alquiler,id',
+            'detalle_id' => 'nullable|exists:detalle_pagos_alquiler,id',
+        ]);
+
+        Log::debug("Enviando recibo de pago por email", ['pago_id' => $request->pago_id, 'detalle_id' => $request->detalle_id]);
+
+        $pago = PagoAlquiler::with('cliente')->findOrFail($request->pago_id);
+        $cliente = $pago->cliente;
+        if (!$cliente || !$cliente->email) {
+            return response()->json(['message' => 'El cliente no tiene email registrado'], 422);
+        }
+
+        // Si se pasa detalle_id, solo ese detalle; si no, recibo total del pago
+        if ($request->filled('detalle_id')) {
+            $detalle = $pago->detalles()->findOrFail($request->detalle_id);
+            $pdf = app('dompdf.wrapper');
+            $pdf->loadView('emails.recibo-pago', [
+                'pago' => $pago->toArray(),
+                'detalle' => $detalle->toArray(),
+            ]);
+            $pdfData = $pdf->output();
+            Mail::to($cliente->email)
+                ->send(new \App\Mail\ReciboClienteMail(
+                    $cliente->toArray(),
+                    $pago->mes,
+                    $pago->anyo,
+                    $pago->toArray(),
+                    $detalle->importe,
+                    $pdfData,
+                    $detalle->toArray()
+                ));
+        } else {
+            $pdf = app('dompdf.wrapper');
+            $pdf->loadView('emails.recibo-pago-total', [
+                'pago' => $pago->toArray(),
+            ]);
+            $pdfData = $pdf->output();
+            Mail::to($cliente->email)
+                ->send(new \App\Mail\ReciboClienteMail(
+                    $cliente->toArray(),
+                    $pago->mes,
+                    $pago->anyo,
+                    $pago->toArray(),
+                    $pago->importe_total,
+                    $pdfData,
+                    null
+                ));
+        }
+        return response()->json(['message' => 'Recibo enviado correctamente']);
     }
 }

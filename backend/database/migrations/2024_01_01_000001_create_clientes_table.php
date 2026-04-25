@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('apellido', 100);
             $table->string('telefono', 20)->nullable();
             $table->string('dni', 20)->unique();
+            $table->string('email', 150)->nullable();
             $table->string('foto_dni')->nullable();
             $table->timestamps();
         });
