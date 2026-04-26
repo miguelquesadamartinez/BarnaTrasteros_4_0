@@ -315,6 +315,7 @@ function openEdit(c) {
     apellido: c.apellido,
     dni: c.dni,
     telefono: c.telefono ?? '',
+    email: c.email ?? '',
     direccion: c.direccion ?? '',
     codigo_postal: c.codigo_postal ?? '',
     ciudad: c.ciudad ?? '',
