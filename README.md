@@ -177,6 +177,14 @@ Borrar todas las tablas y recrearlas (incluyendo seeders):
 docker compose exec backend php artisan migrate:fresh --seed
 ```
 
+## Limpiar cachés de Laravel
+
+Para limpiar la caché de configuración, rutas, vistas y optimizaciones de Laravel:
+
+```bash
+docker compose exec backend php artisan optimize:clear
+```
+
 ## Backups and restore
 
 ```bash
