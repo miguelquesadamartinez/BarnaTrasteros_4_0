@@ -2,38 +2,95 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Factura del mes</title>
+    <title>Factura</title>
 </head>
 <body style="font-family: Arial, sans-serif; background: #f8f8f8; color: #222; margin:0; padding:0;">
-    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px #0001;">
-        <div style="background:#fcc105;padding:18px 24px 10px 24px;">
-            <h2 style="margin:0;color:#111827;font-size:1.5rem;">Factura del mes</h2>
-            <div style="color:#4b5563;font-size:1rem;">{{ $mesNombre }} {{ $anyo }}</div>
+@php
+    $logoPath = public_path('logo.jpg');
+    $logoExists = file_exists($logoPath);
+@endphp
+<div style="max-width:800px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px #0001;">
+    <div style="background:#fcc105;padding:18px 24px 10px 24px;display:flex;align-items:center;">
+        @if($logoExists)
+            <img src="{{ $logoPath }}" style="height:48px;margin-right:24px;" alt="Logo" />
+        @endif
+        <div style="flex:1;">
+            <h2 style="margin:0;color:#111827;font-size:2rem;letter-spacing:1px;">FACTURA</h2>
+            <div style="color:#4b5563;font-size:1.1rem;">{{ $mesNombre }} {{ $anyo }}</div>
         </div>
-        <div style="padding:24px;">
-            <p>Estimado/a <strong>{{ $cliente['nombre'] }} {{ $cliente['apellido'] }}</strong>,</p>
-            <p>Le enviamos adjunta la factura correspondiente al mes de <strong>{{ $mesNombre }} {{ $anyo }}</strong>.
-            <br>Por favor, revise los detalles y no dude en contactarnos si necesita cualquier aclaración.</p>
-            <h3 style="margin-top:2rem;margin-bottom:.5rem;">Resumen de la factura</h3>
-            <ul style="padding-left:1.2em;">
-                <li><strong>Cliente:</strong> {{ $cliente['nombre'] }} {{ $cliente['apellido'] }}</li>
-                <li><strong>DNI:</strong> {{ $cliente['dni'] }}</li>
-                @if(!empty($cliente['direccion']))
-                <li><strong>Dirección:</strong> {{ $cliente['direccion'] }}</li>
-                @endif
-                @if(!empty($cliente['ciudad']))
-                <li><strong>Ciudad:</strong> {{ $cliente['codigo_postal'] }} {{ $cliente['ciudad'] }}</li>
-                @endif
-                <li><strong>Importe total:</strong> {{ number_format($importe_total, 2, ',', '.') }} €</li>
-            </ul>
-            <h4 style="margin-top:1.5rem;">Conceptos facturados:</h4>
-            <ul>
-                @foreach($pagos as $p)
-                    <li>{{ $p['tipo'] === 'piso' ? 'Piso' : 'Trastero' }} #{{ $p['referencia_id'] ?? $p['numero'] }} — {{ number_format($p['importe_total'], 2, ',', '.') }} €</li>
-                @endforeach
-            </ul>
-            <p style="margin-top:2rem;">Gracias por confiar en <strong>Barna Trasteros</strong>.<br>Un cordial saludo,<br><strong>Miguel Quesada Cantos</strong><br><span style="color:#888">Barna Trasteros</span></p>
+        <div style="text-align:right;min-width:180px;">
+            <div style="font-size:1rem;color:#222;font-weight:bold;">Nº {{ $anyo }}-{{ str_pad($mes,2,'0',STR_PAD_LEFT) }}-{{ str_pad($cliente['id'],4,'0',STR_PAD_LEFT) }}</div>
+            <div style="font-size:.95rem;color:#444;">Fecha: {{ date('d/m/Y') }}</div>
         </div>
     </div>
+    <div style="padding:28px 32px 18px 32px;">
+        <div style="display:flex;gap:32px;align-items:flex-start;">
+            <div style="flex:1;min-width:220px;">
+                <div style="font-size:1.1rem;color:#111827;font-weight:bold;margin-bottom:6px;">Facturado a:</div>
+                <div style="font-size:1.05rem;color:#222;font-weight:bold;">{{ $cliente['nombre'] }} {{ $cliente['apellido'] }}</div>
+                <div style="font-size:.98rem;color:#444;">DNI: {{ $cliente['dni'] }}</div>
+                @if(!empty($cliente['direccion']))
+                <div style="font-size:.98rem;color:#444;">{{ $cliente['direccion'] }}</div>
+                @endif
+                @if(!empty($cliente['ciudad']))
+                <div style="font-size:.98rem;color:#444;">{{ $cliente['codigo_postal'] }} {{ $cliente['ciudad'] }}</div>
+                @endif
+            </div>
+            <div style="flex:1;min-width:180px;">
+                <div style="font-size:1.05rem;color:#222;font-weight:bold;margin-bottom:6px;">Importe total:</div>
+                <div style="font-size:1.2rem;color:#111827;font-weight:bold;">{{ number_format($importe_total, 2, ',', '.') }} €</div>
+            </div>
+        </div>
+
+        <div style="margin-top:32px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th style="background:#fcc105;color:#111827;font-size:1rem;padding:10px 8px;text-align:left;border:1px solid #e5e7eb;">Concepto</th>
+                        <th style="background:#fcc105;color:#111827;font-size:1rem;padding:10px 8px;text-align:left;border:1px solid #e5e7eb;">Período</th>
+                        <th style="background:#fcc105;color:#111827;font-size:1rem;padding:10px 8px;text-align:right;border:1px solid #e5e7eb;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($pagos as $i => $p)
+                        <tr style="background:{{ $i%2==0 ? '#f8f8f8' : '#fff' }};">
+                            <td style="padding:9px 8px;font-size:.98rem;color:#222;border:1px solid #e5e7eb;">
+                                {{ $p['tipo'] === 'piso' ? 'Arrendamiento Piso' : 'Arrendamiento Trastero' }} {{ $p['numero'] ?? $p['referencia_id'] }}
+                            </td>
+                            <td style="padding:9px 8px;font-size:.98rem;color:#222;border:1px solid #e5e7eb;">
+                                {{ $mesNombre }} {{ $anyo }}
+                            </td>
+                            <td style="padding:9px 8px;font-size:.98rem;color:#111827;font-weight:bold;text-align:right;border:1px solid #e5e7eb;">
+                                {{ number_format($p['importe_total'], 2, ',', '.') }} €
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top:32px;display:flex;gap:32px;align-items:flex-end;">
+            <div style="flex:1;"></div>
+            <div style="min-width:220px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 12px;font-size:1rem;color:#444;border:1px solid #e5e7eb;">Base imponible:</td>
+                        <td style="padding:8px 12px;font-size:1rem;color:#444;text-align:right;border:1px solid #e5e7eb;">{{ number_format($importe_total/1.21, 2, ',', '.') }} €</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 12px;font-size:1rem;color:#444;border:1px solid #e5e7eb;">IVA (21%):</td>
+                        <td style="padding:8px 12px;font-size:1rem;color:#444;text-align:right;border:1px solid #e5e7eb;">{{ number_format($importe_total-($importe_total/1.21), 2, ',', '.') }} €</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;">TOTAL FACTURA</td>
+                        <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;text-align:right;">{{ number_format($importe_total, 2, ',', '.') }} €</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div style="margin-top:36px;font-size:1.05rem;color:#222;">Gracias por confiar en <strong>Barna Trasteros</strong>.<br>Un cordial saludo,<br><strong>Miguel Quesada Cantos</strong><br><span style="color:#888">Barna Trasteros</span></div>
+    </div>
+</div>
 </body>
 </html>
