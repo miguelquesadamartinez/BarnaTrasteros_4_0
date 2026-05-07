@@ -107,7 +107,7 @@ async function enviarFacturaEmail(f) {
       mes: mes.value,
       anyo: anyo.value
     })
-    toast.success('Factura enviada por email correctamente')
+    toast.success('Factura en cola de envío — llegará en breve')
   } catch (e) {
     console.error('Error al enviar email de factura:', e)
     toast.error(e.displayMessage || 'Error al enviar el email')

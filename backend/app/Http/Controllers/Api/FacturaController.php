@@ -97,7 +97,7 @@ class FacturaController extends Controller
         $pdfData = $pdf->output();
 
         Mail::to($cliente->email)
-            ->send(new \App\Mail\FacturaClienteMail(
+            ->queue(new \App\Mail\FacturaClienteMail(
                 $cliente->toArray(),
                 $request->mes,
                 $request->anyo,
@@ -106,6 +106,6 @@ class FacturaController extends Controller
                 $pdfData
             ));
 
-        return response()->json(['message' => 'Factura enviada correctamente']);
+        return response()->json(['message' => 'Factura en cola de envío']);
     }
 }

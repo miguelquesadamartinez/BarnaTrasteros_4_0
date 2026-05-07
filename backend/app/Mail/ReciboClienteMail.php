@@ -35,7 +35,7 @@ class ReciboClienteMail extends Mailable
         $this->anyo = $anyo;
         $this->pago = $pago;
         $this->importe_total = $importe_total;
-        $this->pdf = $pdf;
+        $this->pdf = base64_encode($pdf);
         $this->detalle = $detalle;
         $this->esDetalle = $detalle !== null;
     }
@@ -64,7 +64,7 @@ class ReciboClienteMail extends Mailable
                 'mesNombre' => $mesNombre,
                 'importe_total' => $this->importe_total,
             ])
-            ->attachData($this->pdf, $nombreRecibo, [
+            ->attachData(base64_decode($this->pdf), $nombreRecibo, [
                 'mime' => 'application/pdf',
             ]);
     }

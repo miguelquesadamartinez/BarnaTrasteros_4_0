@@ -27,7 +27,7 @@ class FacturaClienteMail extends Mailable
         $this->anyo = $anyo;
         $this->pagos = $pagos;
         $this->importe_total = $importe_total;
-        $this->pdf = $pdf;
+        $this->pdf = base64_encode($pdf);
     }
 
     public function build()
@@ -46,7 +46,7 @@ class FacturaClienteMail extends Mailable
                 'pagos' => $this->pagos,
                 'importe_total' => $this->importe_total,
             ])
-            ->attachData($this->pdf, $nombreFactura, [
+            ->attachData(base64_decode($this->pdf), $nombreFactura, [
                 'mime' => 'application/pdf',
             ])
             ;

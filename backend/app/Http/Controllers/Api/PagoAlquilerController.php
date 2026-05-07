@@ -281,7 +281,7 @@ class PagoAlquilerController extends Controller
             ]);
             $pdfData = $pdf->output();
             Mail::to($cliente->email)
-                ->send(new \App\Mail\ReciboClienteMail(
+                ->queue(new \App\Mail\ReciboClienteMail(
                     $cliente->toArray(),
                     $pago->mes,
                     $pago->anyo,
@@ -297,7 +297,7 @@ class PagoAlquilerController extends Controller
             ]);
             $pdfData = $pdf->output();
             Mail::to($cliente->email)
-                ->send(new \App\Mail\ReciboClienteMail(
+                ->queue(new \App\Mail\ReciboClienteMail(
                     $cliente->toArray(),
                     $pago->mes,
                     $pago->anyo,
@@ -307,6 +307,6 @@ class PagoAlquilerController extends Controller
                     null
                 ));
         }
-        return response()->json(['message' => 'Recibo enviado correctamente']);
+        return response()->json(['message' => 'Recibo en cola de envío']);
     }
 }

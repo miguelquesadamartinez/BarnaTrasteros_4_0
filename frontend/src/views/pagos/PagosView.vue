@@ -503,7 +503,7 @@ const toast = useToast()
 async function enviarReciboPagoEmail(pago) {
   try {
     await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id })
-    toast.success('Recibo enviado por email correctamente')
+    toast.success('Recibo en cola de envío — llegará en breve')
   } catch (e) {
     toast.error(e.displayMessage || 'Error al enviar el email')
   }
@@ -512,7 +512,7 @@ async function enviarReciboPagoEmail(pago) {
 async function enviarReciboDetalleEmail(pago, detalle) {
   try {
     await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id, detalle_id: detalle.id })
-    toast.success('Recibo enviado por email correctamente')
+    toast.success('Recibo en cola de envío — llegará en breve')
   } catch (e) {
     toast.error(e.displayMessage || 'Error al enviar el email')
   }
