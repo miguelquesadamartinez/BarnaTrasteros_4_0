@@ -84,7 +84,7 @@
               <td><span class="badge" :class="estadoBadge(g.estado)">{{ g.estado }}</span></td>
               <td>
                 <div class="actions-cell">
-                  <button v-if="g.estado !== 'pagado' && !(g.pagado > 0)" class="btn btn-light btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
+                  <button v-if="g.estado !== 'pagado'" class="btn btn-light btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
                   <button class="btn btn-info btn-sm" title="Ver pagos registrados" @click="openDetalleView(g)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo general" @click="generarReciboGastoTotal(g)">📄</button>
                   <button
@@ -276,31 +276,46 @@
 
     <!-- Modal: Registrar pago de gasto -->
     <AppModal v-model="showPagoModal" title="Registrar Pago del Gasto" size="md">
-      <div v-if="pagoTarget" class="mb-2">
-        <p><strong>Gasto:</strong> {{ pagoTarget.descripcion }}</p>
-        <p><strong>Pendiente:</strong> <span class="text-danger">{{ formatMoney(+pagoTarget.importe_total - +pagoTarget.pagado) }}</span></p>
+      <!-- Éxito: pago registrado -->
+      <div v-if="lastPagoDetalle" class="text-center py-3">
+        <p class="text-success fw-bold mb-3">✔ Pago registrado correctamente</p>
+        <div class="form-actions justify-content-center">
+          <button
+            v-if="pagoTarget && pagoTarget.referencia_tipo !== 'general'"
+            class="btn btn-success btn-sm"
+            @click="enviarReciboDetalleGastoEmail(pagoTarget, lastPagoDetalle); showPagoModal = false"
+          >@ Enviar recibo por email</button>
+          <button class="btn btn-secondary btn-sm" @click="showPagoModal = false">Cerrar</button>
+        </div>
       </div>
-      <form @submit.prevent="registrarPagoGasto">
-        <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
-        <div class="form-group">
-          <label class="form-label">Importe (€) *</label>
-          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pagoTarget ? +pagoTarget.importe_total - +pagoTarget.pagado : undefined" required />
+      <!-- Formulario de pago -->
+      <template v-else>
+        <div v-if="pagoTarget" class="mb-2">
+          <p><strong>Gasto:</strong> {{ pagoTarget.descripcion }}</p>
+          <p><strong>Pendiente:</strong> <span class="text-danger">{{ formatMoney(+pagoTarget.importe_total - +pagoTarget.pagado) }}</span></p>
         </div>
-        <div class="form-group">
-          <label class="form-label">Fecha de pago *</label>
-          <input v-model="pagoForm.fecha_pago" class="form-control" type="date" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notas</label>
-          <textarea v-model="pagoForm.notas" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="showPagoModal = false">Cerrar</button>
-          <button type="submit" class="btn btn-success" :disabled="pagando">
-            {{ pagando ? 'Procesando...' : 'Confirmar Pago' }}
-          </button>
-        </div>
-      </form>
+        <form @submit.prevent="registrarPagoGasto">
+          <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
+          <div class="form-group">
+            <label class="form-label">Importe (€) *</label>
+            <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pagoTarget ? +pagoTarget.importe_total - +pagoTarget.pagado : undefined" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha de pago *</label>
+            <input v-model="pagoForm.fecha_pago" class="form-control" type="date" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notas</label>
+            <textarea v-model="pagoForm.notas" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" @click="showPagoModal = false">Cerrar</button>
+            <button type="submit" class="btn btn-success" :disabled="pagando">
+              {{ pagando ? 'Procesando...' : 'Confirmar Pago' }}
+            </button>
+          </div>
+        </form>
+      </template>
     </AppModal>
 
     <!-- Modal: Imágenes del gasto -->
@@ -373,6 +388,7 @@ const showDetalleModal = ref(false)
 const showDelete = ref(false)
 const editTarget = ref(null)
 const pagoTarget = ref(null)
+const lastPagoDetalle = ref(null)
 const imagenTarget = ref(null)
 const detalleViewTarget = ref(null)
 const toDelete = ref(null)
@@ -492,6 +508,7 @@ function openPago(g) {
   pagoTarget.value = g
   pagoForm.value = { importe: +(g.importe_total) - +(g.pagado), fecha_pago: today(), notas: '' }
   pagoError.value = ''
+  lastPagoDetalle.value = null
   showPagoModal.value = true
 }
 
@@ -556,12 +573,16 @@ async function registrarPagoGasto() {
     if (editTarget.value && editTarget.value.id === updatedGasto.id) {
       editTarget.value = updatedGasto
     }
+    const ultimoDetalle = updatedGasto.detalles?.length
+      ? updatedGasto.detalles[updatedGasto.detalles.length - 1]
+      : null
     // Si el gasto queda completamente pagado, generar recibo automáticamente
-    if (updatedGasto.estado === 'pagado' && updatedGasto.detalles?.length) {
-      const ultimoDetalle = updatedGasto.detalles[updatedGasto.detalles.length - 1]
+    if (updatedGasto.estado === 'pagado' && ultimoDetalle) {
       generarReciboGasto(updatedGasto, ultimoDetalle)
     }
-    showPagoModal.value = false
+    // Actualizar pagoTarget con datos frescos y mostrar opción de email
+    pagoTarget.value = updatedGasto
+    lastPagoDetalle.value = ultimoDetalle
     await loadGastos(currentPage.value)
   } catch (e) {
     pagoError.value = e.displayMessage || 'Error al registrar el pago'
