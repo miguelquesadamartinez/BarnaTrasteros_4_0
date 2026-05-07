@@ -28,6 +28,20 @@
             <option value="pagado">Pagado</option>
           </select>
         </div>
+        <div class="filter-item">
+          <span class="filter-label">Mes</span>
+          <select v-model="filters.mes" class="form-control" @change="loadGastos(1)">
+            <option value="">Todos</option>
+            <option v-for="m in 12" :key="m" :value="m">{{ MESES[m] }}</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">Año</span>
+          <select v-model="filters.anyo" class="form-control" @change="loadGastos(1)">
+            <option value="">Todos</option>
+            <option v-for="y in anyoOptions" :key="y" :value="y">{{ y }}</option>
+          </select>
+        </div>
         <button class="btn btn-secondary" style="margin-top:auto" @click="clearFilters">Limpiar</button>
       </div>
 
@@ -297,7 +311,7 @@ function descargarReciboGasto(gasto, detalle) {
   generarReciboGasto(gasto, detalle)
 }
 
-const filters = ref({ tipo: '', estado: '' })
+const filters = ref({ tipo: '', estado: '', mes: '', anyo: '' })
 const currentPage = ref(1)
 const showForm = ref(false)
 const showPagoModal = ref(false)
@@ -316,6 +330,12 @@ const filesToUpload = ref([])
 const deleteDetalleGastoId  = ref(null)
 const deletingDetalleGasto  = ref(false)
 const detalleGastoError     = ref('')
+
+const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const anyoOptions = computed(() => {
+  const base = new Date().getFullYear()
+  return Array.from({ length: 6 }, (_, i) => base - i)
+})
 
 const TIPOS = { agua: '💧 Agua', luz: '⚡ Luz', comunidad: '🏘️ Comunidad', mantenimiento: '🔧 Mantenimiento', otro: '📄 Otro' }
 function tipoLabel(t) { return TIPOS[t] || t }
@@ -374,6 +394,8 @@ async function loadGastos(page = currentPage.value) {
   const params = { page }
   if (filters.value.tipo) params.tipo = filters.value.tipo
   if (filters.value.estado) params.estado = filters.value.estado
+  if (filters.value.mes) params.mes = filters.value.mes
+  if (filters.value.anyo) params.anyo = filters.value.anyo
   await store.fetchGastos(params)
 }
 
@@ -382,7 +404,7 @@ function onPageChange(page) {
 }
 
 function clearFilters() {
-  filters.value = { tipo: '', estado: '' }
+  filters.value = { tipo: '', estado: '', mes: '', anyo: '' }
   currentPage.value = 1
   loadGastos(1)
 }

@@ -16,17 +16,25 @@ class GastoController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $cacheKey = 'gastos:list:' . md5(serialize($request->only(['tipo', 'estado', 'per_page', 'page'])));
+        $cacheKey = 'gastos:list:' . md5(serialize($request->only(['tipo', 'estado', 'mes', 'anyo', 'per_page', 'page'])));
 
         $gastos = Cache::tags(['gastos'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
             $query = Gasto::with(['detalles', 'imagenes']);
 
-            if ($request->has('tipo') && $request->tipo) {
+            if ($request->filled('tipo')) {
                 $query->where('tipo', $request->tipo);
             }
 
-            if ($request->has('estado') && $request->estado) {
+            if ($request->filled('estado')) {
                 $query->where('estado', $request->estado);
+            }
+
+            if ($request->filled('mes')) {
+                $query->whereMonth('fecha_emision', $request->integer('mes'));
+            }
+
+            if ($request->filled('anyo')) {
+                $query->whereYear('fecha_emision', $request->integer('anyo'));
             }
 
             $perPage = $request->integer('per_page', 15);
