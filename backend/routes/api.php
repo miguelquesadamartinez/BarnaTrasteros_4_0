@@ -38,6 +38,7 @@ Route::delete('pagos-alquiler/{pagoAlquiler}/detalles/{detalle}', [PagoAlquilerC
 Route::post('pagos-alquiler/enviar-recibo-email', [PagoAlquilerController::class, 'enviarReciboEmail']);
 
 // Gastos
+Route::post('gastos/enviar-recibo-email', [GastoController::class, 'enviarReciboEmail']);
 Route::apiResource('gastos', GastoController::class);
 Route::post('gastos/{gasto}/pago', [GastoController::class, 'registrarPago']);
 Route::delete('gastos/{gasto}/detalles/{detalle}', [GastoController::class, 'eliminarDetalle']);

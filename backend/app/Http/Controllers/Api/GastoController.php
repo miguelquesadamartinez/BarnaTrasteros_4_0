@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\DetalleGasto;
 use App\Models\Gasto;
 use App\Models\ImagenGasto;
+use App\Models\Piso;
+use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class GastoController extends Controller
@@ -274,5 +277,55 @@ class GastoController extends Controller
         });
 
         return response()->json($gasto);
+    }
+
+    /**
+     * Enviar recibo de un gasto (general o detalle concreto) por email al cliente vinculado.
+     */
+    public function enviarReciboEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'gasto_id'   => 'required|exists:gastos,id',
+            'detalle_id' => 'nullable|exists:detalle_gastos,id',
+        ]);
+
+        $gasto = Gasto::with('detalles')->findOrFail($request->gasto_id);
+
+        // Obtener el email del cliente según la referencia del gasto
+        $email = null;
+        if ($gasto->referencia_tipo === 'trastero') {
+            $ref   = Trastero::with('cliente')->find($gasto->referencia_id);
+            $email = $ref?->cliente?->email;
+        } elseif ($gasto->referencia_tipo === 'piso') {
+            $ref   = Piso::with('cliente')->find($gasto->referencia_id);
+            $email = $ref?->cliente?->email;
+        }
+
+        if (!$email) {
+            return response()->json(['message' => 'No hay cliente con email asociado a este gasto'], 422);
+        }
+
+        if ($request->filled('detalle_id')) {
+            $detalle  = $gasto->detalles()->findOrFail($request->detalle_id);
+            $pdf      = app('dompdf.wrapper');
+            $pdf->loadView('emails.recibo-gasto', [
+                'gasto'     => $gasto->toArray(),
+                'detalle'   => $detalle->toArray(),
+                'esDetalle' => true,
+            ]);
+            $pdfData = $pdf->output();
+            Mail::to($email)->queue(new \App\Mail\ReciboGastoMail($gasto->toArray(), $pdfData, $detalle->toArray()));
+        } else {
+            $pdf = app('dompdf.wrapper');
+            $pdf->loadView('emails.recibo-gasto', [
+                'gasto'     => $gasto->toArray(),
+                'detalle'   => null,
+                'esDetalle' => false,
+            ]);
+            $pdfData = $pdf->output();
+            Mail::to($email)->queue(new \App\Mail\ReciboGastoMail($gasto->toArray(), $pdfData));
+        }
+
+        return response()->json(['message' => 'Recibo en cola de envío']);
     }
 }

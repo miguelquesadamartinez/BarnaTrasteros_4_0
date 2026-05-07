@@ -400,6 +400,165 @@ docker compose logs queue_worker -f
 
 ---
 
+## Sistema de emails
+
+### Visión general
+
+El sistema envía emails en tres situaciones:
+
+| Tipo de email | Cuándo se dispara | Destinatario |
+|---|---|---|
+| **Recibo de pago de alquiler** (detalle) | El usuario pulsa ✉️ en un pago individual dentro del modal "Ver" | El cliente asignado al piso/trastero |
+| **Recibo mensual de alquiler** (total) | El usuario pulsa ✉️ en la fila del listado de pagos | El cliente asignado al piso/trastero |
+| **Factura mensual** | El usuario pulsa "Enviar factura por email" en la sección Facturas | El cliente de la factura |
+| **Recibo de gasto** (detalle) | El usuario pulsa ✉️ en un pago individual dentro del modal "Ver" de Gastos | El cliente del piso/trastero vinculado al gasto |
+| **Recibo de gasto** (general) | El usuario pulsa ✉️ en la fila del listado de gastos | El cliente del piso/trastero vinculado al gasto |
+| **Reporte de pagos generados** | El job mensual termina de generar los pagos del mes | Dirección configurada en `REPORT_PAGOS_EMAIL` |
+
+---
+
+### Arquitectura: envío asíncrono con cola
+
+Todos los emails se **encolan** en lugar de enviarse de forma síncrona. Esto permite que la interfaz muestre el mensaje de confirmación instantáneamente sin esperar a que el servidor de correo responda.
+
+```
+Usuario pulsa ✉️
+       │
+       ▼
+Controlador PHP
+  1. Genera el PDF con DomPDF (en memoria)
+  2. Codifica el PDF en base64
+  3. Crea el objeto Mailable con los datos
+  4. Mail::to($email)->queue(new XxxMail(...))
+       │
+       │  INSERT en tabla `jobs` (MySQL)
+       │
+       ▼
+  Respuesta inmediata → 200 OK
+  Frontend muestra toast "Recibo en cola de envío"
+       │
+       │  (segundos después)
+       │
+       ▼
+barnatrasteros_queue (queue_worker)
+  php artisan queue:work --sleep=3 --tries=3
+  1. Lee el job de la tabla `jobs`
+  2. Deserializa el Mailable
+  3. Decodifica el PDF de base64
+  4. Envía el email con adjunto PDF vía SMTP
+  5. Elimina el job de la tabla `jobs`
+```
+
+> **¿Por qué base64?** Laravel serializa los Mailables a JSON para guardarlos en la cola. El binario de un PDF contiene bytes no-UTF-8 que provocarían un error de serialización. Codificarlo en base64 garantiza que el JSON sea válido.
+
+---
+
+### Clases Mailable
+
+| Clase | Archivo | Descripción |
+|---|---|---|
+| `ReciboClienteMail` | `app/Mail/ReciboClienteMail.php` | Recibo de pago de alquiler (piso/trastero). Sirve tanto para un pago concreto (`esDetalle = true`) como para el recibo total del mes (`esDetalle = false`) |
+| `FacturaClienteMail` | `app/Mail/FacturaClienteMail.php` | Factura mensual con todos los cargos del cliente |
+| `ReciboGastoMail` | `app/Mail/ReciboGastoMail.php` | Recibo de un gasto (pago individual o resumen general del gasto) |
+| `ReportePagosGeneradosMail` | `app/Mail/ReportePagosGeneradosMail.php` | Reporte HTML que envía el job mensual al administrador |
+
+Todas usan los traits `Queueable` y `SerializesModels` de Laravel.
+
+---
+
+### Templates de email (Blade)
+
+| Vista | Ruta | Uso |
+|---|---|---|
+| `recibo-pago` | `resources/views/emails/recibo-pago.blade.php` | Recibo de un detalle de pago de alquiler |
+| `recibo-pago-total` | `resources/views/emails/recibo-pago-total.blade.php` | Recibo mensual global de alquiler |
+| `factura-cliente` | `resources/views/emails/factura-cliente.blade.php` | Factura con tabla de conceptos e IVA |
+| `recibo-gasto` | `resources/views/emails/recibo-gasto.blade.php` | Recibo de pago de un gasto (detalle o general) |
+
+Todos los templates comparten el mismo estilo: cabecera amarilla con logo, tabla de conceptos y firma de empresa.
+
+---
+
+### Rutas de API que disparan emails
+
+| Método | Endpoint | Controlador | Descripción |
+|---|---|---|---|
+| `POST` | `/api/pagos-alquiler/enviar-recibo-email` | `PagoAlquilerController@enviarReciboEmail` | Recibo de alquiler. Parámetros: `pago_id` (obligatorio), `detalle_id` (opcional) |
+| `POST` | `/api/facturas/enviar-email` | `FacturaController@enviarEmail` | Factura mensual. Parámetros: `cliente_id`, `mes`, `anyo` |
+| `POST` | `/api/gastos/enviar-recibo-email` | `GastoController@enviarReciboEmail` | Recibo de gasto. Parámetros: `gasto_id` (obligatorio), `detalle_id` (opcional) |
+
+---
+
+### Configuración SMTP
+
+El servidor de correo se configura en el `docker-compose.yml` o en `backend/.env` mediante las variables estándar de Laravel:
+
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `MAIL_MAILER` | Driver de correo | `smtp` |
+| `MAIL_HOST` | Servidor SMTP | `smtp.gmail.com` |
+| `MAIL_PORT` | Puerto SMTP | `587` |
+| `MAIL_USERNAME` | Usuario de la cuenta | `tu@gmail.com` |
+| `MAIL_PASSWORD` | Contraseña o App Password | `xxxx xxxx xxxx xxxx` |
+| `MAIL_ENCRYPTION` | Cifrado | `tls` |
+| `MAIL_FROM_ADDRESS` | Dirección remitente | `info@barnatrasteros.com` |
+| `MAIL_FROM_NAME` | Nombre del remitente | `Barna Trasteros` |
+| `REPORT_PAGOS_EMAIL` | Destinatario del reporte mensual | `admin@barnatrasteros.com` |
+
+> Con Gmail es necesario usar una **App Password** (contraseña de aplicación) en lugar de la contraseña normal. Se genera en: Cuenta de Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones.
+
+---
+
+### Adjunto PDF
+
+Cada email (excepto el reporte mensual) incluye un PDF adjunto generado en el servidor con **DomPDF**:
+
+```
+ReciboClienteMail   → Recibo_pago_{id}.pdf  /  Recibo_pago_{id}_detalle_{id}.pdf
+FacturaClienteMail  → Factura_{anyo}-{mes}-{cliente_id}.pdf
+ReciboGastoMail     → Recibo_gasto_{id}.pdf  /  Recibo_gasto_{id}_pago_{id}.pdf
+```
+
+El PDF se genera **antes** de encolar el job (en el controlador), de modo que si el PDF fallara el error se devolvería al usuario inmediatamente. Una vez generado, los datos binarios se codifican en base64 y se almacenan en el job de la cola.
+
+---
+
+### Cuándo NO se envía el email
+
+- El cliente no tiene dirección de email registrada → el controlador devuelve `422` con mensaje de error.
+- Un gasto de tipo `general` (sin piso/trastero asociado) no tiene cliente → el botón ✉️ no aparece en la interfaz.
+- La tabla `jobs` está vacía o el contenedor `queue_worker` está parado → los emails permanecen pendientes y se procesarán cuando el worker vuelva a arrancar.
+
+---
+
+### Depuración de emails
+
+Ver los jobs pendientes en la cola:
+
+```bash
+docker compose exec backend php artisan queue:monitor database
+```
+
+Reintentar jobs fallidos:
+
+```bash
+docker compose exec backend php artisan queue:retry all
+```
+
+Ver jobs fallidos:
+
+```bash
+docker compose exec backend php artisan queue:failed
+```
+
+Ver logs del worker en tiempo real:
+
+```bash
+docker compose logs queue_worker -f
+```
+
+---
+
 ## API — Endpoints principales
 
 ```

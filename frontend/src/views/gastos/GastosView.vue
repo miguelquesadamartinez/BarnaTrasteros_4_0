@@ -87,9 +87,16 @@
               <td>
                 <div class="actions-cell">
                   <button v-if="g.estado !== 'pagado'" class="btn btn-success btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
-                  <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboGastoTotal(g)">📄</button>
+                  <button class="btn btn-info btn-sm" title="Ver pagos registrados" @click="openDetalleView(g)">📋 Ver</button>
+                  <button class="btn btn-secondary btn-sm" title="Imprimir recibo general" @click="generarReciboGastoTotal(g)">📄</button>
+                  <button
+                    v-if="g.referencia_tipo !== 'general'"
+                    class="btn btn-success btn-sm"
+                    title="Enviar recibo general por email"
+                    @click="enviarReciboGastoEmail(g)"
+                  >✉️</button>
                   <button class="btn btn-secondary btn-sm" title="Ver imágenes" @click="openImagenes(g)">🖼️</button>
-                  <button class="btn btn-info btn-sm" title="Editar gasto" @click="openEdit(g)">✏️</button>
+                  <button class="btn btn-sm" style="background:#f97316;border-color:#f97316;color:#fff" title="Editar gasto" @click="openEdit(g)">✏️</button>
                   <button class="btn btn-danger btn-sm" title="Eliminar gasto" @click="confirmDelete(g)">🗑️</button>
                 </div>
               </td>
@@ -114,6 +121,52 @@
         @change="onPageChange"
       />
     </div>
+
+    <!-- Modal: Ver pagos del gasto -->
+    <AppModal v-model="showDetalleModal" title="Registros de Pago" size="lg">
+      <div v-if="detalleViewTarget">
+        <p>
+          <strong>{{ tipoLabel(detalleViewTarget.tipo) }}</strong> — {{ detalleViewTarget.descripcion }}
+          <span v-if="detalleViewTarget.referencia_tipo !== 'general'" class="text-muted" style="font-size:.9rem">
+            ({{ detalleViewTarget.referencia_tipo }} #{{ detalleViewTarget.referencia_id }})
+          </span>
+        </p>
+        <div class="detail-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Importe</th>
+                <th>Notas</th>
+                <th>Recibo PDF</th>
+                <th v-if="detalleViewTarget.referencia_tipo !== 'general'" style="text-align:center">Enviar email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!detalleViewTarget.detalles?.length">
+                <td colspan="5" class="text-center text-muted">Sin pagos registrados</td>
+              </tr>
+              <tr v-for="d in detalleViewTarget.detalles" :key="d.id">
+                <td>{{ formatDate(d.fecha_pago) }}</td>
+                <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
+                <td>{{ d.notas || '—' }}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" @click="descargarReciboGasto(detalleViewTarget, d)">📄 PDF</button>
+                </td>
+                <td v-if="detalleViewTarget.referencia_tipo !== 'general'" style="text-align:center;">
+                  <button
+                    class="btn btn-success btn-sm"
+                    style="margin:0 auto;display:block"
+                    title="Enviar recibo de este pago por email"
+                    @click="enviarReciboDetalleGastoEmail(detalleViewTarget, d)"
+                  >✉️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AppModal>
 
     <!-- Modal: Crear/Editar gasto -->
     <AppModal v-model="showForm" :title="editTarget ? 'Editar Gasto' : 'Nuevo Gasto'" size="lg">
@@ -300,11 +353,13 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+import { useToast } from 'vue-toastification'
 import api from '@/api'
 
 const store = useGastosStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
+const toast = useToast()
 const { generarReciboGasto, generarReciboGastoTotal } = usePdfRecibo()
 
 function descargarReciboGasto(gasto, detalle) {
@@ -316,10 +371,12 @@ const currentPage = ref(1)
 const showForm = ref(false)
 const showPagoModal = ref(false)
 const showImagenesModal = ref(false)
+const showDetalleModal = ref(false)
 const showDelete = ref(false)
 const editTarget = ref(null)
 const pagoTarget = ref(null)
 const imagenTarget = ref(null)
+const detalleViewTarget = ref(null)
 const toDelete = ref(null)
 const saving = ref(false)
 const pagando = ref(false)
@@ -564,6 +621,31 @@ onMounted(() => {
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })
+
+// --- Ver pagos del gasto ---
+function openDetalleView(g) {
+  detalleViewTarget.value = g
+  showDetalleModal.value = true
+}
+
+// --- Enviar recibo de gasto por email ---
+async function enviarReciboGastoEmail(gasto) {
+  try {
+    await api.post('/gastos/enviar-recibo-email', { gasto_id: gasto.id })
+    toast.success('Recibo en cola de envío — llegará en breve')
+  } catch (e) {
+    toast.error(e.response?.data?.message || e.displayMessage || 'Error al enviar el email')
+  }
+}
+
+async function enviarReciboDetalleGastoEmail(gasto, detalle) {
+  try {
+    await api.post('/gastos/enviar-recibo-email', { gasto_id: gasto.id, detalle_id: detalle.id })
+    toast.success('Recibo en cola de envío — llegará en breve')
+  } catch (e) {
+    toast.error(e.response?.data?.message || e.displayMessage || 'Error al enviar el email')
+  }
+}
 </script>
 
 <style scoped>
