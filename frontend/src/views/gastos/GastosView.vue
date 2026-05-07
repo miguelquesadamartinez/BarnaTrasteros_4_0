@@ -94,7 +94,7 @@
                     class="btn btn-success btn-sm"
                     title="Enviar recibo general por email"
                     @click="enviarReciboGastoEmail(g)"
-                  >✉️</button>
+                  >@</button>
                   <button class="btn btn-secondary btn-sm" title="Ver imágenes" @click="openImagenes(g)">🖼️</button>
                   <button class="btn btn-sm" style="background:#f97316;border-color:#f97316;color:#fff" title="Editar gasto" @click="openEdit(g)">✏️</button>
                   <button class="btn btn-danger btn-sm" title="Eliminar gasto" @click="confirmDelete(g)">🗑️</button>
@@ -159,7 +159,7 @@
                     style="margin:0 auto;display:block"
                     title="Enviar recibo de este pago por email"
                     @click="enviarReciboDetalleGastoEmail(detalleViewTarget, d)"
-                  >✉️</button>
+                  >@</button>
                 </td>
               </tr>
             </tbody>

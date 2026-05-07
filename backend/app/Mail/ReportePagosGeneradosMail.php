@@ -28,7 +28,7 @@ class ReportePagosGeneradosMail extends Mailable implements ShouldQueue
         $mesNombre = ucfirst(Carbon::create($this->anyo, $this->mes, 1)->locale('es')->translatedFormat('F'));
 
         return new Envelope(
-            subject: "Reporte de pagos generados - {$mesNombre} {$this->anyo}",
+            subject: "Relatorio de pagos generados - {$mesNombre} {$this->anyo}",
         );
     }
 

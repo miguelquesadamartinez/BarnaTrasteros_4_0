@@ -101,7 +101,7 @@
                     class="btn btn-success btn-sm"
                     title="Enviar recibo por email"
                     @click="enviarReciboPagoEmail(p)"
-                  >✉️</button>
+                  >@</button>
                   <button v-if="p.estado === 'pendiente'" class="btn btn-danger btn-sm" title="Eliminar pago" @click="confirmDelete(p)">🗑️</button>
                 </div>
               </td>
@@ -195,7 +195,7 @@
                     style="margin:0 auto; display:block;"
                     title="Enviar recibo por email"
                     @click="enviarReciboDetalleEmail(detalleTarget, d)"
-                  >✉️</button>
+                  >@</button>
                 </td>
                 <td style="text-align:center;">
                   <button
