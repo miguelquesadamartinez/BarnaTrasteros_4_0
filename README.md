@@ -185,6 +185,18 @@ Para limpiar la caché de configuración, rutas, vistas y optimizaciones de Lara
 docker compose exec backend php artisan optimize:clear
 ```
 
+## Limpiar volúmenes huérfanos de Docker
+
+Para eliminar todos los volúmenes de Docker que no están en uso por ningún contenedor (volúmenes huérfanos):
+
+```bash
+docker volume prune
+```
+O para forzar la eliminación sin confirmación:
+```bash
+docker volume prune -f
+```
+
 ## Backups and restore
 
 ```bash
