@@ -668,6 +668,9 @@ async function enviarReciboDetalleGastoEmail(gasto, detalle) {
 </script>
 
 <style scoped>
+.table-wrapper table {
+  font-size: 0.8rem;
+}
 .imagenes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
