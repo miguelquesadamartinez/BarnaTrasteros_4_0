@@ -54,7 +54,6 @@
               <th>Tipo</th>
               <th>Descripción</th>
               <th>Referencia</th>
-              <th>Emisión</th>
               <th>Vencimiento</th>
               <th>Total</th>
               <th>Pagado</th>
@@ -76,7 +75,6 @@
                 </span>
                 <span v-else class="badge badge-muted">General</span>
               </td>
-              <td>{{ formatDate(g.fecha_emision) }}</td>
               <td :class="vencido(g) ? 'text-danger' : ''">{{ formatDate(g.fecha_vencimiento) || '—' }}</td>
               <td>{{ formatMoney(g.importe_total) }}</td>
               <td class="text-success">{{ formatMoney(g.pagado) }}</td>
@@ -86,7 +84,7 @@
               <td><span class="badge" :class="estadoBadge(g.estado)">{{ g.estado }}</span></td>
               <td>
                 <div class="actions-cell">
-                  <button v-if="g.estado !== 'pagado'" class="btn btn-success btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
+                  <button v-if="g.estado !== 'pagado' && !(g.pagado > 0)" class="btn btn-light btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
                   <button class="btn btn-info btn-sm" title="Ver pagos registrados" @click="openDetalleView(g)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo general" @click="generarReciboGastoTotal(g)">📄</button>
                   <button
@@ -97,7 +95,7 @@
                   >@</button>
                   <button class="btn btn-secondary btn-sm" title="Ver imágenes" @click="openImagenes(g)">🖼️</button>
                   <button class="btn btn-sm" style="background:#f97316;border-color:#f97316;color:#fff" title="Editar gasto" @click="openEdit(g)">✏️</button>
-                  <button class="btn btn-danger btn-sm" title="Eliminar gasto" @click="confirmDelete(g)">🗑️</button>
+                  <button v-if="!(g.pagado > 0)" class="btn btn-danger btn-sm" title="Eliminar gasto" @click="confirmDelete(g)">🗑️</button>
                 </div>
               </td>
             </tr>
