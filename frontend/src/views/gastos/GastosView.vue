@@ -84,7 +84,7 @@
               <td><span class="badge" :class="estadoBadge(g.estado)">{{ g.estado }}</span></td>
               <td>
                 <div class="actions-cell">
-                  <button v-if="g.estado !== 'pagado'" class="btn btn-light btn-sm" title="Registrar pago" @click="openPago(g)">💰</button>
+                  <button v-if="g.estado !== 'pagado'" class="btn btn-sm" style="background:#FFD600;border-color:#FFD600;color:#000" title="Registrar pago" @click="openPago(g)">💰</button>
                   <button v-if="g.estado !== 'pendiente'" class="btn btn-info btn-sm" title="Ver pagos registrados" @click="openDetalleView(g)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo general" @click="generarReciboGastoTotal(g)">📄</button>
                   <button

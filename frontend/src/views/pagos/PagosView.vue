@@ -90,7 +90,8 @@
                 <div class="actions-cell" style="display:flex; flex-direction:row; align-items:center; justify-content:center; gap:0.4rem;">
                   <button
                     v-if="p.estado !== 'pagado'"
-                    class="btn btn-success btn-sm"
+                    class="btn btn-sm"
+                    style="background:#FFD600;border-color:#FFD600;color:#000"
                     title="Registrar pago"
                     @click="openPago(p)"
                   >💰 Pagar</button>
