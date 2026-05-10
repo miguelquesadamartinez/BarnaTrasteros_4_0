@@ -122,33 +122,48 @@
 
     <!-- Modal: Registrar Pago -->
     <AppModal v-model="showPagoModal" title="Registrar Pago" size="md">
-      <div v-if="pagoTarget" class="mb-2">
-        <p><strong>Cliente:</strong> {{ pagoTarget.cliente?.nombre }} {{ pagoTarget.cliente?.apellido }}</p>
-        <p><strong>Pendiente total del cliente:</strong> <span class="text-danger">{{ formatMoney(pendienteTotalClienteHome) }}</span></p>
-        <p class="text-muted" style="font-size:.85rem">El pago se distribuirá automáticamente entre los meses más antiguos con deuda (pisos y trasteros). No se puede superar el total pendiente del cliente.</p>
+      <!-- Éxito: pago registrado -->
+      <div v-if="lastPagoDetalle" class="text-center py-3">
+        <p class="text-success fw-bold mb-3">✔ Pago registrado correctamente</p>
+        <p v-if="lastPagoDetalle.sobrante > 0" class="text-muted">Sobrante no aplicado: {{ formatMoney(lastPagoDetalle.sobrante) }}</p>
+        <div class="form-actions justify-content-center">
+          <button
+            v-if="pagoTarget?.cliente?.email && lastPagoDetalle.pago && lastPagoDetalle.detalle"
+            class="btn btn-success btn-sm"
+            @click="enviarReciboDetalleEmail(lastPagoDetalle.pago, lastPagoDetalle.detalle); showPagoModal = false"
+          >@ Enviar recibo por email</button>
+          <button class="btn btn-secondary btn-sm" @click="showPagoModal = false">Cerrar</button>
+        </div>
       </div>
-      <form @submit.prevent="registrarPago">
-        <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
-        <div class="alert alert-success" v-if="pagoSuccess">{{ pagoSuccess }}</div>
-        <div class="form-group">
-          <label class="form-label">Importe a pagar (€) *</label>
-          <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pendienteTotalClienteHome || undefined" required />
+      <!-- Formulario de pago -->
+      <template v-else>
+        <div v-if="pagoTarget" class="mb-2">
+          <p><strong>Cliente:</strong> {{ pagoTarget.cliente?.nombre }} {{ pagoTarget.cliente?.apellido }}</p>
+          <p><strong>Pendiente total del cliente:</strong> <span class="text-danger">{{ formatMoney(pendienteTotalClienteHome) }}</span></p>
+          <p class="text-muted" style="font-size:.85rem">El pago se distribuirá automáticamente entre los meses más antiguos con deuda (pisos y trasteros). No se puede superar el total pendiente del cliente.</p>
         </div>
-        <div class="form-group">
-          <label class="form-label">Fecha de pago *</label>
-          <input v-model="pagoForm.fecha_pago" class="form-control" type="date" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notas</label>
-          <textarea v-model="pagoForm.notas" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="showPagoModal = false">Cerrar</button>
-          <button type="submit" class="btn btn-success" :disabled="pagando">
-            {{ pagando ? 'Procesando...' : 'Confirmar Pago' }}
-          </button>
-        </div>
-      </form>
+        <form @submit.prevent="registrarPago">
+          <div class="alert alert-danger" v-if="pagoError">{{ pagoError }}</div>
+          <div class="form-group">
+            <label class="form-label">Importe a pagar (€) *</label>
+            <input v-model.number="pagoForm.importe" class="form-control" type="number" step="0.01" min="0.01" :max="pendienteTotalClienteHome || undefined" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha de pago *</label>
+            <input v-model="pagoForm.fecha_pago" class="form-control" type="date" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notas</label>
+            <textarea v-model="pagoForm.notas" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" @click="showPagoModal = false">Cerrar</button>
+            <button type="submit" class="btn btn-success" :disabled="pagando">
+              {{ pagando ? 'Procesando...' : 'Confirmar Pago' }}
+            </button>
+          </div>
+        </form>
+      </template>
     </AppModal>
 
     <!-- Modal: Detalle de pagos -->
@@ -236,6 +251,7 @@ const detalleTarget    = ref(null)
 const pagando          = ref(false)
 const pagoError        = ref('')
 const pagoSuccess      = ref('')
+const lastPagoDetalle  = ref(null)
 const pagoForm         = ref({ importe: 0, fecha_pago: today(), notas: '' })
 const deleteDetalleId  = ref(null)
 const deletingDetalle  = ref(false)
@@ -296,6 +312,7 @@ async function openPago(p) {
   pagoForm.value    = { importe: Math.round(totalPendCliente * 100) / 100, fecha_pago: today(), notas: '' }
   pagoError.value   = ''
   pagoSuccess.value = ''
+  lastPagoDetalle.value = null
   showPagoModal.value = true
 }
 
@@ -325,9 +342,11 @@ async function registrarPago() {
         if (idx !== -1) pendPagos.value[idx] = updated
       })
     }
+    const firstUpdated = data.pagos_actualizados?.[0]
+    const ultimoDetalle = firstUpdated?.detalles?.at(-1) ?? null
+    lastPagoDetalle.value = { pago: firstUpdated ?? null, detalle: ultimoDetalle, sobrante: data.sobrante }
     // Recargar para reflejar los que ya no son pendientes
     await loadPendientes(pendPage.value)
-    showPagoModal.value = false
   } catch (e) {
     pagoError.value = e.response?.data?.error || 'Error al registrar el pago'
   } finally {
@@ -348,6 +367,14 @@ async function doEliminarDetalle(detalle) {
     detalleError.value = e.response?.data?.error || 'Error al eliminar el detalle'
   } finally {
     deletingDetalle.value = false
+  }
+}
+
+async function enviarReciboDetalleEmail(pago, detalle) {
+  try {
+    await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id, detalle_id: detalle.id })
+  } catch (e) {
+    console.error('Error al enviar el email', e)
   }
 }
 
