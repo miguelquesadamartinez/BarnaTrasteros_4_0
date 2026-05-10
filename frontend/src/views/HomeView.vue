@@ -88,9 +88,10 @@
                 <td>
                   <div class="actions-cell">
                     <button
-                      class="btn btn-success btn-sm"
+                      class="btn btn-warning btn-sm"
                       title="Registrar pago"
                       @click="openPago(p)"
+                      style="background-color:#ffe066;border-color:#ffe066;color:#664d03;"
                     >💰 Pagar</button>
                     <button class="btn btn-info btn-sm" title="Ver detalle" @click="openDetalle(p)">📋 Ver</button>
                     <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
