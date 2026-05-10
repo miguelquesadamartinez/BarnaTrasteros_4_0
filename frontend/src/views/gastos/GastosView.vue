@@ -138,11 +138,12 @@
                 <th>Notas</th>
                 <th>Recibo PDF</th>
                 <th v-if="detalleViewTarget.referencia_tipo !== 'general'" style="text-align:center">Enviar email</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!detalleViewTarget.detalles?.length">
-                <td colspan="5" class="text-center text-muted">Sin pagos registrados</td>
+                <td colspan="6" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleViewTarget.detalles" :key="d.id">
                 <td>{{ formatDate(d.fecha_pago) }}</td>
@@ -159,10 +160,26 @@
                     @click="enviarReciboDetalleGastoEmail(detalleViewTarget, d)"
                   >@</button>
                 </td>
+                <td>
+                  <button
+                    v-if="deleteDetalleViewId !== d.id"
+                    class="btn btn-danger btn-sm"
+                    title="Eliminar este pago"
+                    @click="deleteDetalleViewId = d.id"
+                  >🗑️</button>
+                  <span v-else style="display:inline-flex;gap:.35rem;align-items:center">
+                    <span style="font-size:.8rem;color:#b00">¿Seguro?</span>
+                    <button class="btn btn-danger btn-sm" :disabled="deletingDetalleView" @click="doEliminarDetalleView(d)">
+                      {{ deletingDetalleView ? '...' : '✓' }}
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @click="deleteDetalleViewId = null">✕</button>
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <div v-if="detalleViewError" class="alert alert-danger" style="margin-top:.75rem">{{ detalleViewError }}</div>
       </div>
     </AppModal>
 
@@ -401,6 +418,9 @@ const filesToUpload = ref([])
 const deleteDetalleGastoId  = ref(null)
 const deletingDetalleGasto  = ref(false)
 const detalleGastoError     = ref('')
+const deleteDetalleViewId   = ref(null)
+const deletingDetalleView   = ref(false)
+const detalleViewError      = ref('')
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const anyoOptions = computed(() => {
@@ -644,7 +664,25 @@ onMounted(() => {
 // --- Ver pagos del gasto ---
 function openDetalleView(g) {
   detalleViewTarget.value = g
+  deleteDetalleViewId.value = null
+  detalleViewError.value    = ''
   showDetalleModal.value = true
+}
+
+async function doEliminarDetalleView(detalle) {
+  deletingDetalleView.value = true
+  detalleViewError.value    = ''
+  try {
+    const { data } = await api.delete(`/gastos/${detalleViewTarget.value.id}/detalles/${detalle.id}`)
+    detalleViewTarget.value = data
+    const idx = store.gastos.findIndex((g) => g.id === data.id)
+    if (idx !== -1) store.gastos[idx] = data
+    deleteDetalleViewId.value = null
+  } catch (e) {
+    detalleViewError.value = e.response?.data?.error || 'Error al eliminar el pago'
+  } finally {
+    deletingDetalleView.value = false
+  }
 }
 
 // --- Enviar recibo de gasto por email ---
