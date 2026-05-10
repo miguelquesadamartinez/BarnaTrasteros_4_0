@@ -41,11 +41,7 @@ class Handler extends ExceptionHandler
             $content['body'] = request()->all();
             $content['ip'] = request()->ip();
             $content['fullUrl'] = request()->fullUrl();
-            if (isset(Auth::user()->name)){
-                $content['user'] = Auth::user()->name;
-            } else {
-                $content['user'] = 'No user logged';
-            }
+
             Mail::to(env('EMAIL_FOR_APP_ERROR'))->send(new ExceptionOccured($content));
         } catch (Throwable $exception) {
             Log::error($exception);

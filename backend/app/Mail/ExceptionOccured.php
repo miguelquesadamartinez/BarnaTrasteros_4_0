@@ -31,7 +31,7 @@ class ExceptionOccured extends Mailable
     public function envelope()
     {
         return new Envelope(
-            subject: 'NoName BackEnd Exception Occurred',
+            subject: 'Barnatrasteros Exception Occurred',
         );
     }
 
