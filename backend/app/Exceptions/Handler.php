@@ -6,7 +6,6 @@ use Throwable;
 use App\Mail\ExceptionOccured;
 use Illuminate\Support\Facades\Log;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
