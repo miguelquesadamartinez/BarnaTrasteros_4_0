@@ -46,6 +46,12 @@
           </select>
         </div>
         <button class="btn btn-secondary" style="margin-top:auto" @click="clearFilters">Limpiar</button>
+        <div class="filter-item" style="margin-left:auto">
+          <span class="filter-label">Por página</span>
+          <select v-model="perPage" class="form-control" style="max-width:90px" @change="onPerPageChange">
+            <option v-for="n in PER_PAGE_OPTIONS" :key="n" :value="n">{{ n }}</option>
+          </select>
+        </div>
       </div>
 
       <div v-if="store.loading" class="spinner-wrapper"><div class="spinner"></div></div>
@@ -312,6 +318,7 @@ import { usePdfRecibo } from '@/composables/usePdfRecibo'
 
 import api from '@/api'
 import { useToast } from 'vue-toastification'
+import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
 const store = usePagosStore()
 const clientesStore = useClientesStore()
@@ -325,6 +332,7 @@ function descargarReciboPago(pago, detalle) {
 
 const filters = ref({ cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
 const currentPage = ref(1)
+const perPage = ref(DEFAULT_PER_PAGE)
 const showPagoModal = ref(false)
 const showDetalle = ref(false)
 const showNewModal = ref(false)
@@ -386,7 +394,7 @@ function onClienteSearch() {
 
 async function loadPagos(page = currentPage.value) {
   currentPage.value = page
-  const params = { page }
+  const params = { page, per_page: perPage.value }
   if (filters.value.cliente) params.cliente = filters.value.cliente
   if (filters.value.tipo)    params.tipo    = filters.value.tipo
   if (filters.value.estado)  params.estado  = filters.value.estado
@@ -397,6 +405,10 @@ async function loadPagos(page = currentPage.value) {
 
 function onPageChange(page) {
   loadPagos(page)
+}
+
+function onPerPageChange() {
+  loadPagos(1)
 }
 
 function clearFilters() {

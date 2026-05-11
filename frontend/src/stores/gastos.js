@@ -4,7 +4,7 @@ import api from '@/api'
 
 export const useGastosStore = defineStore('gastos', () => {
   const gastos = ref([])
-  const pagination = ref({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0, per_page: 15 })
+  const pagination = ref({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 })
   const loading = ref(false)
   const error = ref(null)
 

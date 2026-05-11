@@ -49,6 +49,12 @@
             <option value="piso">Pisos</option>
           </select>
           <span class="text-muted" style="white-space:nowrap">{{ pendPagination.total }} registros</span>
+          <div class="filter-item" style="margin-left:auto">
+            <span class="filter-label">Por página</span>
+            <select v-model="pendPerPage" class="form-control" style="max-width:90px" @change="loadPendientes(1)">
+              <option v-for="n in PER_PAGE_OPTIONS" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </div>
         </div>
 
         <div v-if="pendLoading" class="spinner-wrapper"><div class="spinner"></div></div>
@@ -228,6 +234,7 @@ import api from '@/api'
 import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import { usePdfRecibo } from '@/composables/usePdfRecibo'
+import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
 const { generarReciboPago, generarReciboPagoTotal } = usePdfRecibo()
 
@@ -241,6 +248,7 @@ const pendError      = ref('')
 const pendSearch     = ref('')
 const pendTipo       = ref('')
 const pendPage       = ref(1)
+const pendPerPage    = ref(DEFAULT_PER_PAGE)
 const pendPagination = ref({ total: 0, last_page: 1, from: 0, to: 0 })
 
 // Modales
@@ -281,7 +289,7 @@ async function loadPendientes(page = 1) {
   pendLoading.value = true
   pendError.value   = ''
   try {
-    const params = { page, per_page: 15, estado: 'pendiente,parcial' }
+    const params = { page, per_page: pendPerPage.value, estado: 'pendiente,parcial' }
     if (pendSearch.value) params.cliente = pendSearch.value
     if (pendTipo.value)   params.tipo    = pendTipo.value
     const { data } = await api.get('/pagos-alquiler', { params })

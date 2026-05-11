@@ -14,6 +14,12 @@
           placeholder="Buscar por nombre, apellido o DNI..."
         />
         <span class="text-muted">{{ store.pagination.total }} clientes</span>
+        <div class="filter-item" style="margin-left:auto">
+          <span class="filter-label">Por página</span>
+          <select v-model="perPage" class="form-control" style="max-width:90px" @change="onPerPageChange">
+            <option v-for="n in PER_PAGE_OPTIONS" :key="n" :value="n">{{ n }}</option>
+          </select>
+        </div>
       </div>
 
       <div v-if="store.loading" class="spinner-wrapper"><div class="spinner"></div></div>
@@ -205,6 +211,7 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import api from '@/api'
+import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
 const store = useClientesStore()
 const trasterosStore = useTrasterosStore()
@@ -212,6 +219,7 @@ const pisosStore = usePisosStore()
 
 const search = ref('')
 const currentPage = ref(1)
+const perPage = ref(DEFAULT_PER_PAGE)
 const showModal = ref(false)
 const showDelete = ref(false)
 const editing = ref(false)
@@ -277,13 +285,18 @@ watch(search, (val) => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     currentPage.value = 1
-    store.fetchClientes({ search: val, page: 1 })
+    store.fetchClientes({ search: val, page: 1, per_page: perPage.value })
   }, 350)
 })
 
 function onPageChange(page) {
   currentPage.value = page
-  store.fetchClientes({ search: search.value, page })
+  store.fetchClientes({ search: search.value, page, per_page: perPage.value })
+}
+
+function onPerPageChange() {
+  currentPage.value = 1
+  store.fetchClientes({ search: search.value, page: 1, per_page: perPage.value })
 }
 
 function onFotoChange(e) {
@@ -403,7 +416,7 @@ async function save() {
 
     showModal.value = false
     // Refrescar clientes para reflejar relaciones
-    await store.fetchClientes({ search: search.value, page: currentPage.value })
+    await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
   } catch (e) {
     formError.value = e.displayMessage || 'Error al guardar'
   } finally {
@@ -416,7 +429,7 @@ async function doDelete() {
   try {
     await store.deleteCliente(toDelete.value.id)
     showDelete.value = false
-    await store.fetchClientes({ search: search.value, page: currentPage.value })
+    await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')
   } finally {
@@ -425,7 +438,7 @@ async function doDelete() {
 }
 
 onMounted(() => {
-  store.fetchClientes({ page: 1 })
+  store.fetchClientes({ page: 1, per_page: perPage.value })
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })
