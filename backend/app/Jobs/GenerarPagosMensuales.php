@@ -101,23 +101,27 @@ class GenerarPagosMensuales implements ShouldQueue
             return (float) $pago->importe_total;
         });
 
-        $destinatario = (string) config('mail.reportes.pagos_to', 'miguel.quesada.martinez.1975@gmail.com');
+        if ($generados > 0) {
+            $destinatario = (string) config('mail.reportes.pagos_to', 'miguel.quesada.martinez.1975@gmail.com');
 
-        if (env('APP_ENV') === 'production') {
-            Mail::to($destinatario)
-                ->cc('nieves.martinez.lloret@hotmail.es')
-                ->queue(
-                new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
+            if (env('APP_ENV') === 'production') {
+                Mail::to($destinatario)
+                    ->cc('nieves.martinez.lloret@hotmail.es')
+                    ->queue(
+                    new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
+                );
+            } else {
+                Mail::to($destinatario)
+                    ->queue(
+                    new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
+                );
+            }
+            Log::info(
+                "GenerarPagosMensuales: Reporte encolado para {$destinatario} con {$pagosGenerados->count()} pagos (total {$totalImporte})"
             );
         } else {
-            Mail::to($destinatario)
-                ->queue(
-                new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
-            );
+            Log::info("GenerarPagosMensuales: No se han generado pagos, no se envía email.");
         }
-        Log::info(
-            "GenerarPagosMensuales: Reporte encolado para {$destinatario} con {$pagosGenerados->count()} pagos (total {$totalImporte})"
-        );
 
 
         Log::info("GenerarPagosMensuales: {$generados} registros generados para {$this->mes}/{$this->anyo}");
