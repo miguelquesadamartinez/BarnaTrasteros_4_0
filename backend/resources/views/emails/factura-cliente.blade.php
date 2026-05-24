@@ -6,13 +6,15 @@
 </head>
 <body style="font-family: Arial, sans-serif; background: #f8f8f8; color: #222; margin:0; padding:0;">
 @php
-    $logoPath = public_path('logo.jpg');
-    $logoExists = file_exists($logoPath);
+    $logoCid = null;
+    if (isset($message) && file_exists(public_path('logo.jpg'))) {
+        $logoCid = $message->embed(public_path('logo.jpg'));
+    }
 @endphp
 <div style="max-width:800px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px #0001;">
     <div style="background:#fcc105;padding:18px 24px 10px 24px;display:flex;align-items:center;">
-        @if($logoExists)
-            <img src="{{ $logoPath }}" style="height:48px;margin-right:24px;" alt="Logo" />
+        @if($logoCid)
+            <img src="{{ $logoCid }}" style="height:48px;margin-right:24px;" alt="Logo" />
         @endif
         <div style="flex:1;">
             <h2 style="margin:0;color:#111827;font-size:2rem;letter-spacing:1px;">FACTURA</h2>
