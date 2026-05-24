@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <title>Recibo de pago</title>
 </head>
-<body style="font-family: Arial, sans-serif; background: #f8f8f8; color: #222; margin:0; padding:0;">
+<body style="font-family: Arial, sans-serif; background: #ffffff; color: #222; margin:0; padding:0;">
 @php
-    $logoCid = null;
+    $logoSrc = null;
     if (isset($message) && file_exists(public_path('logo.jpg'))) {
-        $logoCid = $message->embed(public_path('logo.jpg'));
+        $logoSrc = $message->embed(public_path('logo.jpg'));
+    } elseif (file_exists(public_path('logo.jpg'))) {
+        $logoSrc = public_path('logo.jpg');
     }
 @endphp
-<div style="max-width:800px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px #0001;">
+<div style="max-width:800px;margin:0 auto;background:#fff;">
     <div style="background:#fcc105;padding:18px 24px 10px 24px;display:flex;align-items:center;">
-        @if($logoCid)
-            <img src="{{ $logoCid }}" style="height:48px;margin-right:24px;" alt="Logo" />
+        @if($logoSrc)
+            <img src="{{ $logoSrc }}" style="height:48px;margin-right:24px;" alt="Logo" />
         @endif
         <div style="flex:1;">
             <h2 style="margin:0;color:#111827;font-size:2rem;letter-spacing:1px;">RECIBO DE PAGO</h2>
