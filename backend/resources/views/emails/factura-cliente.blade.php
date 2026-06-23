@@ -57,7 +57,7 @@
                 </thead>
                 <tbody>
                     @foreach($pagos as $i => $p)
-                        <tr style="background:{{ $i%2==0 ? '#f8f8f8' : '#fff' }};">
+                        <tr @if($i%2==0) style="background:#f8f8f8;" @else style="background:#ffffff;" @endif>
                             <td style="padding:9px 8px;font-size:.98rem;color:#222;border:1px solid #e5e7eb;">
                                 {{ $p['tipo'] === 'piso' ? 'Arrendamiento Piso' : 'Arrendamiento Trastero' }} {{ $p['numero'] ?? $p['referencia_id'] }}
                             </td>
