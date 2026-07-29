@@ -104,7 +104,7 @@
                   <button v-if="p.estado !== 'pendiente'" class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋 Ver</button>
                   <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
                   <button
-                    v-if="p.cliente && p.cliente.email"
+                    v-if="tieneClienteAsociado(p)"
                     class="btn btn-success btn-sm"
                     title="Enviar recibo por email"
                     @click="enviarReciboPagoEmail(p)"
@@ -142,7 +142,7 @@
         <p v-if="lastPagoDetalle.sobrante > 0" class="text-muted">Sobrante no aplicado: {{ formatMoney(lastPagoDetalle.sobrante) }}</p>
         <div class="form-actions justify-content-center">
           <button
-            v-if="pagoTarget?.cliente?.email"
+            v-if="tieneClienteAsociado(pagoTarget)"
             class="btn btn-success btn-sm"
             @click="enviarReciboDetalleEmail(lastPagoDetalle.pago, lastPagoDetalle.detalle); showPagoModal = false"
           >@ Enviar recibo por email</button>
@@ -212,7 +212,7 @@
                 </td>
                 <td style="text-align:center;">
                   <button
-                    v-if="detalleTarget.cliente && detalleTarget.cliente.email"
+                    v-if="tieneClienteAsociado(detalleTarget)"
                     class="btn btn-success btn-sm"
                     style="margin:0 auto; display:block;"
                     title="Enviar recibo por email"
@@ -367,6 +367,17 @@ function pendiente(p) {
   return Math.max(0, +p.importe_total - +p.pagado)
 }
 
+function tieneClienteAsociado(pagoOrTarget) {
+  if (!pagoOrTarget) return false
+
+  return Boolean(
+    pagoOrTarget.cliente_id ||
+    pagoOrTarget?.cliente?.id ||
+    pagoOrTarget?.cliente ||
+    pagoOrTarget?.cliente_data
+  )
+}
+
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 function mesNombre(m) { return MESES[m] || m }
 
@@ -433,11 +444,18 @@ async function openPago(p) {
   showPagoModal.value = true
 }
 
-function openDetalle(p) {
-  detalleTarget.value = p
+async function openDetalle(p) {
+  detalleTarget.value = null
   deleteDetalleId.value = null
   detalleError.value = ''
-  showDetalle.value = true
+
+  try {
+    const { data } = await api.get(`/pagos-alquiler/${p.id}`)
+    detalleTarget.value = data
+    showDetalle.value = true
+  } catch (e) {
+    detalleError.value = e.displayMessage || 'Error al cargar los detalles del pago'
+  }
 }
 
 async function doEliminarDetalle(detalle) {

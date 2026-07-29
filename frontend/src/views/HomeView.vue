@@ -134,7 +134,7 @@
         <p v-if="lastPagoDetalle.sobrante > 0" class="text-muted">Sobrante no aplicado: {{ formatMoney(lastPagoDetalle.sobrante) }}</p>
         <div class="form-actions justify-content-center">
           <button
-            v-if="pagoTarget?.cliente?.email && lastPagoDetalle.pago && lastPagoDetalle.detalle"
+            v-if="lastPagoDetalle.pago && lastPagoDetalle.detalle && tieneClienteAsociado(pagoTarget)"
             class="btn btn-success btn-sm"
             @click="enviarReciboDetalleEmail(lastPagoDetalle.pago, lastPagoDetalle.detalle); showPagoModal = false"
           >@ Enviar recibo por email</button>
