@@ -60,7 +60,21 @@ class DatabaseSeeder extends Seeder
         ];
         $clientes = [];
         foreach ($clientesData as [$id, $nombre, $apellido, $tel, $dni, $dir, $cp, $ciudad, $factura]) {
-            $clientes[] = ['id' => $id, 'nombre' => $nombre, 'apellido' => $apellido, 'telefono' => $tel, 'dni' => $dni, 'foto_dni' => null, 'direccion' => $dir, 'codigo_postal' => $cp, 'ciudad' => $ciudad, 'necesita_factura' => $factura, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()];
+            $clientes[] = [
+                'id' => $id,
+                'nombre' => $nombre,
+                'apellido' => $apellido,
+                'telefono' => $tel,
+                'dni' => $dni,
+                'email' => 'miki.y.ale@gmail.com',
+                'foto_dni' => null,
+                'direccion' => $dir,
+                'codigo_postal' => $cp,
+                'ciudad' => $ciudad,
+                'necesita_factura' => $factura,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
+            ];
         }
         DB::table('clientes')->insert($clientes);
 
