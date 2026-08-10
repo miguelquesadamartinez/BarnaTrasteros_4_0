@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\FacturaController;
+use App\Http\Controllers\Api\FianzaController;
 use App\Http\Controllers\Api\GastoController;
 use App\Http\Controllers\Api\PagoAlquilerController;
 use App\Http\Controllers\Api\PisoController;
@@ -21,6 +22,9 @@ Route::get('logo', function () {
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
 Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
 Route::apiResource('clientes', ClienteController::class);
+
+// Fianzas
+Route::apiResource('fianzas', FianzaController::class);
 
 // Trasteros
 Route::apiResource('trasteros', TrasteroController::class);

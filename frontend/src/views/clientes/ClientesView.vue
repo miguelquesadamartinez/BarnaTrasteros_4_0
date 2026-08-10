@@ -182,6 +182,39 @@
           />
         </div>
 
+        <div v-if="editing" class="form-group">
+          <label class="form-label">Fianzas</label>
+          <div v-if="fianzasCliente.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
+            <span
+              v-for="f in fianzasCliente"
+              :key="f.id"
+              class="badge badge-info"
+              style="display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem;padding:.25rem .55rem"
+            >
+              {{ Number(f.importe).toFixed(2) }} € — {{ formatFecha(f.fecha_entrega) }}{{ f.numero ? ` (${f.numero})` : '' }}
+              <button
+                type="button"
+                @click="quitarFianza(f)"
+                title="Marcar como devuelta"
+                style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:1.1rem;line-height:1;color:inherit;opacity:.8"
+              >&times;</button>
+            </span>
+          </div>
+          <span v-else class="text-muted" style="font-size:.85rem;display:block;margin-bottom:.4rem">Ninguna fianza registrada</span>
+          <div class="form-row">
+            <div class="form-group" style="flex:0 0 130px">
+              <input v-model.number="nuevaFianza.importe" class="form-control" type="number" step="0.01" min="0" placeholder="Importe €" />
+            </div>
+            <div class="form-group" style="flex:0 0 160px">
+              <input v-model="nuevaFianza.fecha_entrega" class="form-control" type="date" />
+            </div>
+            <div class="form-group" style="flex:0 0 auto">
+              <button type="button" class="btn btn-secondary btn-sm" @click="addFianza" :disabled="addingFianza">+ Añadir fianza</button>
+            </div>
+          </div>
+          <small class="text-muted">Al quitar una fianza se marca como devuelta y desaparece del listado de fianzas.</small>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="showModal = false">Cancelar</button>
           <button type="submit" class="btn btn-primary" :disabled="saving">
@@ -207,6 +240,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
+import { useFianzasStore } from '@/stores/fianzas'
 import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -216,6 +250,7 @@ import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 const store = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
+const fianzasStore = useFianzasStore()
 
 const search = ref('')
 const currentPage = ref(1)
@@ -236,6 +271,16 @@ function fotoUrl(ruta) {
   return `${apiBase}/storage/${ruta}`
 }
 
+function formatFecha(f) {
+  if (!f) return '—'
+  return new Date(f).toLocaleDateString('es-ES')
+}
+
+function todayStr() {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+}
+
 const emptyForm = () => ({
   nombre: '', apellido: '', dni: '', telefono: '',
   email: '',
@@ -244,6 +289,52 @@ const emptyForm = () => ({
   trastero_ids: [], piso_id: null,
 })
 const form = ref(emptyForm())
+
+// Fianzas del cliente en edición
+const fianzasCliente = ref([])
+const nuevaFianza = ref({ importe: null, fecha_entrega: todayStr() })
+const addingFianza = ref(false)
+
+async function loadFianzasCliente(clienteId) {
+  fianzasCliente.value = await fianzasStore.fetchFianzasCliente(clienteId)
+}
+
+async function addFianza() {
+  if (!nuevaFianza.value.importe || !nuevaFianza.value.fecha_entrega) return
+  addingFianza.value = true
+  try {
+    await fianzasStore.createFianza({
+      cliente_id: form.value._id,
+      importe: nuevaFianza.value.importe,
+      fecha_entrega: nuevaFianza.value.fecha_entrega,
+      devuelta: false,
+    })
+    nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
+    await loadFianzasCliente(form.value._id)
+  } catch (e) {
+    formError.value = e.displayMessage || 'Error al añadir la fianza'
+  } finally {
+    addingFianza.value = false
+  }
+}
+
+async function quitarFianza(f) {
+  try {
+    await fianzasStore.updateFianza(f.id, {
+      cliente_id: f.cliente_id,
+      tipo: f.tipo,
+      referencia_id: f.referencia_id,
+      numero: f.numero,
+      importe: f.importe,
+      fecha_entrega: f.fecha_entrega,
+      notas: f.notas,
+      devuelta: true,
+    })
+    await loadFianzasCliente(form.value._id)
+  } catch (e) {
+    formError.value = e.displayMessage || 'Error al quitar la fianza'
+  }
+}
 
 // Trastero añadir: libres o del cliente actual, excluye los ya seleccionados
 const addTrasteroId = ref(null)
@@ -316,6 +407,8 @@ function openNew() {
   editing.value = false
   form.value = emptyForm()
   currentFoto.value = null
+  fianzasCliente.value = []
+  nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
   showModal.value = true
 }
@@ -341,8 +434,10 @@ function openEdit(c) {
     _clienteId: c.id,
   }
   currentFoto.value = c.foto_dni
+  nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
   showModal.value = true
+  loadFianzasCliente(c.id)
 }
 
 function confirmDelete(c) {

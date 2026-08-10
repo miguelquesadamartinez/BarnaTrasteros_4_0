@@ -41,6 +41,11 @@ class Cliente extends Model
         return $this->hasMany(PagoAlquiler::class, 'cliente_id');
     }
 
+    public function fianzas(): HasMany
+    {
+        return $this->hasMany(Fianza::class, 'cliente_id');
+    }
+
     public function getNombreCompletoAttribute(): string
     {
         return "{$this->nombre} {$this->apellido}";

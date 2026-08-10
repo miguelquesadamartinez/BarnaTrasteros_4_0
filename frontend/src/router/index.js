@@ -4,6 +4,7 @@ import HomeView from '@/views/HomeView.vue'
 import TrasterosView from '@/views/trasteros/TrasterosView.vue'
 import PisosView from '@/views/pisos/PisosView.vue'
 import ClientesView from '@/views/clientes/ClientesView.vue'
+import FianzasView from '@/views/fianzas/FianzasView.vue'
 import PagosView from '@/views/pagos/PagosView.vue'
 import GastosView from '@/views/gastos/GastosView.vue'
 import RelatoriosView from '@/views/relatorios/RelatoriosView.vue'
@@ -17,6 +18,8 @@ const routes = [
   { path: '/trasteros', name: 'trasteros', component: TrasterosView, meta: { title: 'Trasteros' } },
   { path: '/pisos', name: 'pisos', component: PisosView, meta: { title: 'Pisos' } },
   { path: '/clientes', name: 'clientes', component: ClientesView, meta: { title: 'Clientes' } },
+  { path: '/fianzas', name: 'fianzas', component: FianzasView, meta: { title: 'Fianzas Activas' }, props: { soloDevueltas: false } },
+  { path: '/fianzas/devueltas', name: 'fianzas-devueltas', component: FianzasView, meta: { title: 'Fianzas Devueltas' }, props: { soloDevueltas: true } },
   { path: '/pagos', name: 'pagos', component: PagosView, meta: { title: 'Pagos' } },
   { path: '/gastos', name: 'gastos', component: GastosView, meta: { title: 'Gastos' } },
   { path: '/relatorios', name: 'relatorios', component: RelatoriosView, meta: { title: 'Relatorios' } },

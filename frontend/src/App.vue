@@ -6,6 +6,13 @@
         <li><router-link to="/trasteros">📦 Trasteros</router-link></li>
         <li><router-link to="/pisos">🏠 Pisos</router-link></li>
         <li><router-link to="/clientes">👥 Clientes</router-link></li>
+        <li class="nav-dropdown" :class="{ open: fianzasOpen }">
+          <button class="nav-dropdown-toggle" @click="fianzasOpen = !fianzasOpen">💰 Fianzas ▾</button>
+          <ul class="nav-dropdown-menu">
+            <li><router-link to="/fianzas" @click="fianzasOpen = false">✅ Fianzas Activas</router-link></li>
+            <li><router-link to="/fianzas/devueltas" @click="fianzasOpen = false">↩️ Fianzas Devueltas</router-link></li>
+          </ul>
+        </li>
         <li><router-link to="/pagos">💳 Pagos</router-link></li>
         <li><router-link to="/gastos">🧾 Gastos</router-link></li>
         <li><router-link to="/mantenimiento/facturas">🧾 Facturas</router-link></li>
@@ -30,8 +37,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 const dropdownOpen = ref(false)
+const fianzasOpen = ref(false)
 function handleOutsideClick(e) {
-  if (!e.target.closest('.nav-dropdown')) dropdownOpen.value = false
+  if (!e.target.closest('.nav-dropdown')) {
+    dropdownOpen.value = false
+    fianzasOpen.value = false
+  }
 }
 onMounted(() => document.addEventListener('click', handleOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
