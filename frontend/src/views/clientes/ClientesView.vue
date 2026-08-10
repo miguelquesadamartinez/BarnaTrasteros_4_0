@@ -253,6 +253,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
@@ -263,6 +264,7 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import api from '@/api'
 import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
+const route = useRoute()
 const store = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
@@ -610,7 +612,8 @@ async function doDelete() {
 }
 
 onMounted(() => {
-  store.fetchClientes({ page: 1, per_page: perPage.value })
+  if (route.query.q) search.value = String(route.query.q)
+  store.fetchClientes({ search: search.value, page: 1, per_page: perPage.value })
   trasterosStore.fetchTrasteros()
   pisosStore.fetchPisos()
 })

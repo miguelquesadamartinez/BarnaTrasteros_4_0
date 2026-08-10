@@ -3,6 +3,7 @@
     <nav class="navbar">
       <router-link to="/" class="navbar-brand">BarnaTrasteros</router-link>
       <ul class="navbar-menu">
+        <li><router-link to="/busqueda">🔍 Búsqueda</router-link></li>
         <li><router-link to="/trasteros">📦 Trasteros</router-link></li>
         <li><router-link to="/pisos">🏠 Pisos</router-link></li>
         <li><router-link to="/clientes">👥 Clientes</router-link></li>

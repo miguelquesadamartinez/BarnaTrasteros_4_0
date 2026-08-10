@@ -114,11 +114,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePisosStore } from '@/stores/pisos'
 import { useClientesStore } from '@/stores/clientes'
 import AppModal from '@/components/AppModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 
+const route = useRoute()
 const store = usePisosStore()
 const clientesStore = useClientesStore()
 
@@ -210,6 +212,7 @@ async function doDelete() {
 }
 
 onMounted(() => {
+  if (route.query.q) search.value = String(route.query.q)
   store.fetchPisos()
   clientesStore.fetchAllClientes()
 })

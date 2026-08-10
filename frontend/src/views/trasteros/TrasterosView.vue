@@ -131,12 +131,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { useClientesStore } from '@/stores/clientes'
 import { useTamanyosStore } from '@/stores/tamanyos'
 import AppModal from '@/components/AppModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 
+const route = useRoute()
 const store = useTrasterosStore()
 const clientesStore = useClientesStore()
 const tamanyosStore = useTamanyosStore()
@@ -236,6 +238,7 @@ async function doDelete() {
 }
 
 onMounted(() => {
+  if (route.query.q) search.value = String(route.query.q)
   store.fetchTrasteros()
   clientesStore.fetchAllClientes()
   tamanyosStore.fetchTamanyos()

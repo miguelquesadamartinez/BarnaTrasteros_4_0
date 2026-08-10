@@ -151,6 +151,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useFianzasStore } from '@/stores/fianzas'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
@@ -165,6 +166,7 @@ const props = defineProps({
 })
 
 const store = useFianzasStore()
+const route = useRoute()
 const clientesStore = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
@@ -359,6 +361,7 @@ async function doDevolver() {
 }
 
 onMounted(() => {
+  if (route.query.q) search.value = String(route.query.q)
   fetchList(1)
   clientesStore.fetchAllClientes()
   trasterosStore.fetchTrasteros()

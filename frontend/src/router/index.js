@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '@/views/HomeView.vue'
+import BusquedaView from '@/views/busqueda/BusquedaView.vue'
 import TrasterosView from '@/views/trasteros/TrasterosView.vue'
 import PisosView from '@/views/pisos/PisosView.vue'
 import ClientesView from '@/views/clientes/ClientesView.vue'
@@ -15,6 +16,7 @@ import BackupView from '@/views/mantenimiento/BackupView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { title: 'Inicio' } },
+  { path: '/busqueda', name: 'busqueda', component: BusquedaView, meta: { title: 'Búsqueda' } },
   { path: '/trasteros', name: 'trasteros', component: TrasterosView, meta: { title: 'Trasteros' } },
   { path: '/pisos', name: 'pisos', component: PisosView, meta: { title: 'Pisos' } },
   { path: '/clientes', name: 'clientes', component: ClientesView, meta: { title: 'Clientes' } },

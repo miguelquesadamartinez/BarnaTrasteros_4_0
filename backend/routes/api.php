@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BusquedaController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\FacturaController;
 use App\Http\Controllers\Api\FianzaController;
@@ -18,6 +19,9 @@ Route::get('logo', function () {
     if (!file_exists($path)) abort(404);
     return response()->file($path, ['Content-Type' => 'image/jpeg']);
 });
+
+// Búsqueda global
+Route::get('busqueda', [BusquedaController::class, 'buscar']);
 
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
 Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
