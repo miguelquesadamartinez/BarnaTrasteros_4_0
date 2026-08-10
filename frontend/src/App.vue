@@ -4,27 +4,37 @@
       <router-link to="/" class="navbar-brand">BarnaTrasteros</router-link>
       <ul class="navbar-menu">
         <li><router-link to="/busqueda">🔍 Búsqueda</router-link></li>
-        <li><router-link to="/trasteros">📦 Trasteros</router-link></li>
-        <li><router-link to="/pisos">🏠 Pisos</router-link></li>
-        <li><router-link to="/clientes">👥 Clientes</router-link></li>
-        <li class="nav-dropdown" :class="{ open: fianzasOpen }">
-          <button class="nav-dropdown-toggle" @click="fianzasOpen = !fianzasOpen">💰 Fianzas ▾</button>
+        <li class="nav-dropdown" :class="{ open: openMenu === 'inmuebles' }" @mouseenter="openDropdown('inmuebles')" @mouseleave="scheduleClose">
+          <button class="nav-dropdown-toggle" @click="toggleMenu('inmuebles')">🏢 Inmuebles y Clientes ▾</button>
           <ul class="nav-dropdown-menu">
-            <li><router-link to="/fianzas" @click="fianzasOpen = false">✅ Fianzas Activas</router-link></li>
-            <li><router-link to="/fianzas/devueltas" @click="fianzasOpen = false">↩️ Fianzas Devueltas</router-link></li>
+            <li><router-link to="/trasteros" @click="openMenu = null">📦 Trasteros</router-link></li>
+            <li><router-link to="/pisos" @click="openMenu = null">🏠 Pisos</router-link></li>
+            <li><router-link to="/clientes" @click="openMenu = null">👥 Clientes</router-link></li>
           </ul>
         </li>
-        <li><router-link to="/pagos">💳 Pagos</router-link></li>
-        <li><router-link to="/gastos">🧾 Gastos</router-link></li>
-        <li><router-link to="/mantenimiento/facturas">🧾 Facturas</router-link></li>
-        <li><router-link to="/relatorios">📊 Relatorios</router-link></li>
-        <li class="nav-dropdown" :class="{ open: dropdownOpen }">
-          <button class="nav-dropdown-toggle" @click="dropdownOpen = !dropdownOpen">⚙️ Mantenimiento ▾</button>
+        <li class="nav-dropdown" :class="{ open: openMenu === 'fianzas' }" @mouseenter="openDropdown('fianzas')" @mouseleave="scheduleClose">
+          <button class="nav-dropdown-toggle" @click="toggleMenu('fianzas')">💰 Fianzas ▾</button>
           <ul class="nav-dropdown-menu">
-            <li><router-link to="/mantenimiento/tamanyo-trasteros" @click="dropdownOpen = false">📐 Tamaños de Trasteros</router-link></li>
-            <li><router-link to="/mantenimiento/facturas" @click="dropdownOpen = false">🧾 Facturas del Mes</router-link></li>
-            <li><router-link to="/mantenimiento/generar-pagos" @click="dropdownOpen = false">💰 Generar Pagos</router-link></li>
-            <li><router-link to="/mantenimiento/backup" @click="dropdownOpen = false">🗄️ Backup BD</router-link></li>
+            <li><router-link to="/fianzas" @click="openMenu = null">✅ Fianzas Activas</router-link></li>
+            <li><router-link to="/fianzas/devueltas" @click="openMenu = null">↩️ Fianzas Devueltas</router-link></li>
+          </ul>
+        </li>
+        <li class="nav-dropdown" :class="{ open: openMenu === 'contabilidad' }" @mouseenter="openDropdown('contabilidad')" @mouseleave="scheduleClose">
+          <button class="nav-dropdown-toggle" @click="toggleMenu('contabilidad')">📒 Contabilidad ▾</button>
+          <ul class="nav-dropdown-menu">
+            <li><router-link to="/pagos" @click="openMenu = null">💳 Pagos</router-link></li>
+            <li><router-link to="/gastos" @click="openMenu = null">💸 Gastos</router-link></li>
+            <li><router-link to="/mantenimiento/facturas" @click="openMenu = null">🧾 Facturas</router-link></li>
+          </ul>
+        </li>
+        <li><router-link to="/relatorios">📊 Relatorios</router-link></li>
+        <li class="nav-dropdown" :class="{ open: openMenu === 'mantenimiento' }" @mouseenter="openDropdown('mantenimiento')" @mouseleave="scheduleClose">
+          <button class="nav-dropdown-toggle" @click="toggleMenu('mantenimiento')">⚙️ Mantenimiento ▾</button>
+          <ul class="nav-dropdown-menu">
+            <li><router-link to="/mantenimiento/tamanyo-trasteros" @click="openMenu = null">📐 Tamaños de Trasteros</router-link></li>
+            <li><router-link to="/mantenimiento/facturas" @click="openMenu = null">🧾 Facturas del Mes</router-link></li>
+            <li><router-link to="/mantenimiento/generar-pagos" @click="openMenu = null">🧮 Generar Pagos</router-link></li>
+            <li><router-link to="/mantenimiento/backup" @click="openMenu = null">💾 Backup BD</router-link></li>
           </ul>
         </li>
       </ul>
@@ -37,12 +47,25 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-const dropdownOpen = ref(false)
-const fianzasOpen = ref(false)
+const openMenu = ref(null)
+let closeTimer = null
+
+function openDropdown(key) {
+  clearTimeout(closeTimer)
+  openMenu.value = key
+}
+function scheduleClose() {
+  clearTimeout(closeTimer)
+  closeTimer = setTimeout(() => { openMenu.value = null }, 250)
+}
+function toggleMenu(key) {
+  clearTimeout(closeTimer)
+  openMenu.value = openMenu.value === key ? null : key
+}
 function handleOutsideClick(e) {
   if (!e.target.closest('.nav-dropdown')) {
-    dropdownOpen.value = false
-    fianzasOpen.value = false
+    clearTimeout(closeTimer)
+    openMenu.value = null
   }
 }
 onMounted(() => document.addEventListener('click', handleOutsideClick))
