@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cliente;
 use App\Models\Fianza;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class FianzaController extends Controller
 {
@@ -59,6 +61,13 @@ class FianzaController extends Controller
         ]);
 
         $validated['devuelta'] = $request->boolean('devuelta');
+
+        $cliente = Cliente::findOrFail($validated['cliente_id']);
+        if ($cliente->trasteros()->count() === 0 && $cliente->pisos()->count() === 0) {
+            throw ValidationException::withMessages([
+                'cliente_id' => 'El cliente no tiene ningún trastero o piso asociado; no se puede añadir una fianza.',
+            ]);
+        }
 
         $fianza = Fianza::create($validated);
 

@@ -140,12 +140,12 @@
           </div>
         </div>
 
-        <hr v-if="editing" style="margin: 1rem 0; border-color: var(--gris-borde)" />
-        <p v-if="editing" style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
-          <strong>Propiedades asociadas</strong> — Edita el trastero o piso directamente desde aquí.
+        <hr style="margin: 1rem 0; border-color: var(--gris-borde)" />
+        <p style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
+          <strong>Propiedades asociadas</strong> — Opcional, se puede completar más tarde.
         </p>
 
-        <div v-if="editing" class="form-group">
+        <div class="form-group">
           <label class="form-label">Trasteros asignados</label>
           <div v-if="form.trastero_ids.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
             <span
@@ -172,7 +172,7 @@
           <small class="text-muted">Al guardar se actualizan las asignaciones automáticamente.</small>
         </div>
 
-        <div v-if="editing" class="form-group">
+        <div class="form-group">
           <label class="form-label">Piso asignado</label>
           <SearchSelect
             v-model="form.piso_id"
@@ -182,12 +182,12 @@
           />
         </div>
 
-        <div v-if="editing" class="form-group">
+        <div class="form-group">
           <label class="form-label">Fianzas</label>
-          <div v-if="fianzasCliente.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
+          <div v-if="fianzasMostradas.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
             <span
-              v-for="f in fianzasCliente"
-              :key="f.id"
+              v-for="f in fianzasMostradas"
+              :key="f._key"
               class="badge badge-info"
               style="display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem;padding:.25rem .55rem"
             >
@@ -195,24 +195,40 @@
               <button
                 type="button"
                 @click="quitarFianza(f)"
-                title="Marcar como devuelta"
+                :title="editing ? 'Marcar como devuelta' : 'Quitar'"
                 style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:1.1rem;line-height:1;color:inherit;opacity:.8"
               >&times;</button>
             </span>
           </div>
           <span v-else class="text-muted" style="font-size:.85rem;display:block;margin-bottom:.4rem">Ninguna fianza registrada</span>
-          <div class="form-row">
-            <div class="form-group" style="flex:0 0 130px">
-              <input v-model.number="nuevaFianza.importe" class="form-control" type="number" step="0.01" min="0" placeholder="Importe €" />
-            </div>
-            <div class="form-group" style="flex:0 0 160px">
-              <input v-model="nuevaFianza.fecha_entrega" class="form-control" type="date" />
-            </div>
-            <div class="form-group" style="flex:0 0 auto">
-              <button type="button" class="btn btn-secondary btn-sm" @click="addFianza" :disabled="addingFianza">+ Añadir fianza</button>
-            </div>
+
+          <div v-if="unidadesClienteOptions.length === 0" class="alert alert-danger" style="font-size:.85rem;padding:.5rem .75rem">
+            Asigna primero un trastero o piso a este cliente para poder añadir una fianza.
           </div>
-          <small class="text-muted">Al quitar una fianza se marca como devuelta y desaparece del listado de fianzas.</small>
+          <template v-else>
+            <div class="form-group" v-if="unidadesClienteOptions.length > 1">
+              <SearchSelect
+                v-model="unidadFianzaSeleccionada"
+                :options="unidadesClienteOptions"
+                placeholder="Trastero o piso para esta fianza..."
+                :allow-clear="false"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:0 0 130px">
+                <input v-model.number="nuevaFianza.importe" class="form-control" type="number" step="0.01" min="0" placeholder="Importe €" />
+              </div>
+              <div class="form-group" style="flex:0 0 160px">
+                <input v-model="nuevaFianza.fecha_entrega" class="form-control" type="date" />
+              </div>
+              <div class="form-group" style="flex:0 0 auto">
+                <button type="button" class="btn btn-secondary btn-sm" @click="addFianza" :disabled="addingFianza || !unidadFianzaSeleccionada">+ Añadir fianza</button>
+              </div>
+            </div>
+          </template>
+          <small class="text-muted">
+            {{ editing ? 'Al quitar una fianza se marca como devuelta y desaparece del listado de fianzas.' : 'Se crearán al guardar el cliente.' }}
+          </small>
         </div>
 
         <div class="form-actions">
@@ -290,17 +306,59 @@ const emptyForm = () => ({
 })
 const form = ref(emptyForm())
 
-// Fianzas del cliente en edición
+// Fianzas del cliente en edición (persistidas) y fianzas pendientes al crear (aún no hay cliente_id)
 const fianzasCliente = ref([])
+const pendingFianzas = ref([])
 const nuevaFianza = ref({ importe: null, fecha_entrega: todayStr() })
 const addingFianza = ref(false)
+
+const fianzasMostradas = computed(() =>
+  editing.value
+    ? fianzasCliente.value.map((f) => ({ ...f, _key: f.id }))
+    : pendingFianzas.value.map((f) => ({ ...f, _key: f._tempId }))
+)
+
+// Trasteros/piso actualmente seleccionados en el formulario, para poder vincular la fianza a uno de ellos
+const unidadesClienteOptions = computed(() => {
+  const opciones = form.value.trastero_ids
+    .map((id) => trasterosStore.trasteros.find((t) => t.id === id))
+    .filter(Boolean)
+    .map((t) => ({ value: `trastero:${t.id}:${t.numero}`, label: `📦 ${t.numero} — ${t.tamanyo} (${t.piso})` }))
+  if (form.value.piso_id) {
+    const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
+    if (p) opciones.push({ value: `piso:${p.id}:${p.numero}`, label: `🏠 ${p.numero} — ${p.piso}` })
+  }
+  return opciones
+})
+
+const unidadFianzaSeleccionada = ref(null)
+watch(unidadesClienteOptions, (opts) => {
+  if (opts.length === 1) {
+    unidadFianzaSeleccionada.value = opts[0].value
+  } else if (!opts.find((o) => o.value === unidadFianzaSeleccionada.value)) {
+    unidadFianzaSeleccionada.value = null
+  }
+}, { immediate: true })
 
 async function loadFianzasCliente(clienteId) {
   fianzasCliente.value = await fianzasStore.fetchFianzasCliente(clienteId)
 }
 
 async function addFianza() {
-  if (!nuevaFianza.value.importe || !nuevaFianza.value.fecha_entrega) return
+  if (!nuevaFianza.value.importe || !nuevaFianza.value.fecha_entrega || !unidadFianzaSeleccionada.value) return
+  const [tipo, id, numero] = unidadFianzaSeleccionada.value.split(':')
+  const unidad = { tipo, referencia_id: Number(id), numero }
+
+  if (!editing.value) {
+    pendingFianzas.value.push({
+      _tempId: Date.now() + Math.random(),
+      importe: nuevaFianza.value.importe,
+      fecha_entrega: nuevaFianza.value.fecha_entrega,
+      ...unidad,
+    })
+    nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
+    return
+  }
   addingFianza.value = true
   try {
     await fianzasStore.createFianza({
@@ -308,6 +366,7 @@ async function addFianza() {
       importe: nuevaFianza.value.importe,
       fecha_entrega: nuevaFianza.value.fecha_entrega,
       devuelta: false,
+      ...unidad,
     })
     nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
     await loadFianzasCliente(form.value._id)
@@ -319,6 +378,10 @@ async function addFianza() {
 }
 
 async function quitarFianza(f) {
+  if (!editing.value) {
+    pendingFianzas.value = pendingFianzas.value.filter((p) => p._tempId !== f._tempId)
+    return
+  }
   try {
     await fianzasStore.updateFianza(f.id, {
       cliente_id: f.cliente_id,
@@ -408,6 +471,7 @@ function openNew() {
   form.value = emptyForm()
   currentFoto.value = null
   fianzasCliente.value = []
+  pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
   showModal.value = true
@@ -434,6 +498,7 @@ function openEdit(c) {
     _clienteId: c.id,
   }
   currentFoto.value = c.foto_dni
+  pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
   showModal.value = true
@@ -469,45 +534,57 @@ async function save() {
       cliente = await store.createCliente(fd)
     }
 
-    // Actualizar asignaciones de trastero y piso
-    if (editing.value) {
-      // Trasteros: diff old vs new
-      const oldTrasteroIds = trasterosStore.trasteros
-        .filter((t) => t.cliente_id === cliente.id)
-        .map((t) => t.id)
-      const newTrasteroIds = form.value.trastero_ids
-      // Desasignar trasteros eliminados
-      for (const id of oldTrasteroIds) {
-        if (!newTrasteroIds.includes(id)) {
-          const t = trasterosStore.trasteros.find((tt) => tt.id === id)
-          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: null, fecha_inicio_alquiler: null })
-        }
+    // Actualizar asignaciones de trastero y piso (también aplica al crear, por si se seleccionaron)
+    // Trasteros: diff old vs new
+    const oldTrasteroIds = trasterosStore.trasteros
+      .filter((t) => t.cliente_id === cliente.id)
+      .map((t) => t.id)
+    const newTrasteroIds = form.value.trastero_ids
+    // Desasignar trasteros eliminados
+    for (const id of oldTrasteroIds) {
+      if (!newTrasteroIds.includes(id)) {
+        const t = trasterosStore.trasteros.find((tt) => tt.id === id)
+        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: null, fecha_inicio_alquiler: null })
       }
-      // Asignar nuevos trasteros
-      for (const id of newTrasteroIds) {
-        if (!oldTrasteroIds.includes(id)) {
-          const t = trasterosStore.trasteros.find((tt) => tt.id === id)
-          const hoy = new Date()
-          const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-          if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
-        }
-      }
-      // Desasignar piso anterior si cambió
-      const prevPiso = pisosStore.pisos.find((p) => p.cliente_id === cliente.id)
-      if (prevPiso && prevPiso.id !== form.value.piso_id) {
-        await api.put(`/pisos/${prevPiso.id}`, { ...prevPiso, cliente_id: null, fecha_inicio_alquiler: null })
-      }
-      // Asignar nuevo piso
-      if (form.value.piso_id) {
-        const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
+    }
+    // Asignar nuevos trasteros
+    for (const id of newTrasteroIds) {
+      if (!oldTrasteroIds.includes(id)) {
+        const t = trasterosStore.trasteros.find((tt) => tt.id === id)
         const hoy = new Date()
         const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-        if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
+        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
       }
-      // Refrescar trasteros y pisos
-      await trasterosStore.fetchTrasteros()
-      await pisosStore.fetchPisos()
     }
+    // Desasignar piso anterior si cambió
+    const prevPiso = pisosStore.pisos.find((p) => p.cliente_id === cliente.id)
+    if (prevPiso && prevPiso.id !== form.value.piso_id) {
+      await api.put(`/pisos/${prevPiso.id}`, { ...prevPiso, cliente_id: null, fecha_inicio_alquiler: null })
+    }
+    // Asignar nuevo piso
+    if (form.value.piso_id) {
+      const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
+      const hoy = new Date()
+      const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+      if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
+    }
+    // Refrescar trasteros y pisos
+    await trasterosStore.fetchTrasteros()
+    await pisosStore.fetchPisos()
+
+    // Crear las fianzas pendientes (sólo aplica al crear cliente)
+    for (const f of pendingFianzas.value) {
+      await fianzasStore.createFianza({
+        cliente_id: cliente.id,
+        importe: f.importe,
+        fecha_entrega: f.fecha_entrega,
+        tipo: f.tipo,
+        referencia_id: f.referencia_id,
+        numero: f.numero,
+        devuelta: false,
+      })
+    }
+    pendingFianzas.value = []
 
     showModal.value = false
     // Refrescar clientes para reflejar relaciones

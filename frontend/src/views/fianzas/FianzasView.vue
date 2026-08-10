@@ -87,13 +87,17 @@
           />
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Trastero / Piso relacionado</label>
+        <div v-if="clienteSinUnidad" class="alert alert-danger">
+          Este cliente no tiene ningún trastero o piso asociado. Debe asignarle uno antes de poder añadir una fianza.
+        </div>
+
+        <div v-else class="form-group">
+          <label class="form-label">Trastero / Piso relacionado *</label>
           <SearchSelect
             v-model="unidadSeleccionada"
             :options="unidadOptions"
-            placeholder="Buscar trastero o piso (opcional)..."
-            :allow-clear="true"
+            placeholder="Buscar trastero o piso..."
+            :allow-clear="false"
           />
         </div>
 
@@ -127,7 +131,7 @@
 
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="showModal = false">Cancelar</button>
-          <button type="submit" class="btn btn-primary" :disabled="saving">
+          <button type="submit" class="btn btn-primary" :disabled="saving || clienteSinUnidad || !unidadSeleccionada">
             {{ saving ? 'Guardando...' : (editing ? 'Actualizar' : 'Crear') }}
           </button>
         </div>
@@ -214,6 +218,8 @@ const unidadOptions = computed(() => {
       .map((p) => ({ value: `piso:${p.id}:${p.numero}`, label: `🏠 ${p.numero} — ${p.piso}` })),
   ]
 })
+
+const clienteSinUnidad = computed(() => !!form.value.cliente_id && unidadOptions.value.length === 0)
 
 watch(unidadSeleccionada, (val) => {
   if (!val) {
