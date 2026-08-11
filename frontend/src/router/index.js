@@ -5,6 +5,7 @@ import BusquedaView from '@/views/busqueda/BusquedaView.vue'
 import TrasterosView from '@/views/trasteros/TrasterosView.vue'
 import PisosView from '@/views/pisos/PisosView.vue'
 import ClientesView from '@/views/clientes/ClientesView.vue'
+import ListaEsperaView from '@/views/lista-espera/ListaEsperaView.vue'
 import FianzasView from '@/views/fianzas/FianzasView.vue'
 import PagosView from '@/views/pagos/PagosView.vue'
 import GastosView from '@/views/gastos/GastosView.vue'
@@ -20,6 +21,7 @@ const routes = [
   { path: '/trasteros', name: 'trasteros', component: TrasterosView, meta: { title: 'Trasteros' } },
   { path: '/pisos', name: 'pisos', component: PisosView, meta: { title: 'Pisos' } },
   { path: '/clientes', name: 'clientes', component: ClientesView, meta: { title: 'Clientes' } },
+  { path: '/lista-espera', name: 'lista-espera', component: ListaEsperaView, meta: { title: 'Lista de Espera' } },
   { path: '/fianzas', name: 'fianzas', component: FianzasView, meta: { title: 'Fianzas Activas' }, props: { soloDevueltas: false } },
   { path: '/fianzas/devueltas', name: 'fianzas-devueltas', component: FianzasView, meta: { title: 'Fianzas Devueltas' }, props: { soloDevueltas: true } },
   { path: '/pagos', name: 'pagos', component: PagosView, meta: { title: 'Pagos' } },

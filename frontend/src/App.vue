@@ -10,6 +10,7 @@
             <li><router-link to="/trasteros" @click="openMenu = null">📦 Trasteros</router-link></li>
             <li><router-link to="/pisos" @click="openMenu = null">🏠 Pisos</router-link></li>
             <li><router-link to="/clientes" @click="openMenu = null">👥 Clientes</router-link></li>
+            <li><router-link to="/lista-espera" @click="openMenu = null">⏳ Lista de Espera</router-link></li>
           </ul>
         </li>
         <li class="nav-dropdown" :class="{ open: openMenu === 'fianzas' }" @mouseenter="openDropdown('fianzas')" @mouseleave="scheduleClose">

@@ -16,6 +16,9 @@ Schedule::job(new GenerarPagosMensuales)->monthlyOn(1, '00:05');
 // Backup automático diario a las 23:00
 Schedule::command('db:backup')->dailyAt('23:00');
 
+// Limpiar lista de espera (más de 2 meses) todos los días a las 10:00
+Schedule::command('lista-espera:limpiar')->dailyAt('10:00');
+
 //Schedule::command('db:backup')->hourly();
 //Schedule::command('db:backup')->everyThirtyMinutes();
 

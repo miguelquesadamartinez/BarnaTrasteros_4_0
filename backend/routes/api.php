@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\FacturaController;
 use App\Http\Controllers\Api\FianzaController;
 use App\Http\Controllers\Api\GastoController;
+use App\Http\Controllers\Api\ListaEsperaController;
 use App\Http\Controllers\Api\PagoAlquilerController;
 use App\Http\Controllers\Api\PisoController;
 use App\Http\Controllers\Api\RelatorioController;
@@ -36,6 +37,9 @@ Route::apiResource('trasteros', TrasteroController::class);
 
 // Pisos
 Route::apiResource('pisos', PisoController::class);
+
+// Lista de espera
+Route::apiResource('lista-espera', ListaEsperaController::class)->only(['index', 'store', 'destroy']);
 
 // Pagos de Alquiler
 Route::get('pagos-alquiler', [PagoAlquilerController::class, 'index']);
