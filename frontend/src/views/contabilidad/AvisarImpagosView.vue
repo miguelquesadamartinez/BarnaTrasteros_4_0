@@ -30,6 +30,7 @@
           <table>
             <thead>
               <tr>
+                <th>#</th>
                 <th>Cliente</th>
                 <th>Unidad</th>
                 <th>Mes/Año</th>
@@ -39,14 +40,19 @@
             </thead>
             <tbody>
               <tr v-if="pagos.length === 0">
-                <td colspan="5" class="text-center text-muted" style="padding:2rem">No hay pagos pendientes</td>
+                <td colspan="6" class="text-center text-muted" style="padding:2rem">No hay pagos pendientes</td>
               </tr>
-              <tr v-for="p in pagos" :key="p.id">
+              <tr v-for="(p, index) in pagos" :key="p.id">
+                <td class="text-muted">{{ index + 1 }}</td>
                 <td>{{ p.cliente ? `${p.cliente.nombre} ${p.cliente.apellido}` : '—' }}</td>
                 <td>{{ p.tipo === 'piso' ? '🏠' : '📦' }} {{ p.numero ?? p.referencia_id }}</td>
                 <td>{{ mesNombre(p.mes) }} {{ p.anyo }}</td>
                 <td><span class="badge" :class="estadoBadge(p.estado)">{{ p.estado }}</span></td>
                 <td class="text-danger"><strong>{{ formatMoney(calcPendiente(p)) }}</strong></td>
+              </tr>
+              <tr class="totals-row" v-if="pagos.length > 0">
+                <td colspan="5" class="text-right"><strong>Total ({{ pagos.length }} pagos):</strong></td>
+                <td>{{ formatMoney(totalPendiente) }}</td>
               </tr>
             </tbody>
           </table>
