@@ -154,6 +154,18 @@
           </button>
         </div>
 
+        <div v-if="editing && pendienteClienteEdit > 0" class="form-group">
+          <label class="form-label">Pago pendiente: <span class="text-danger">{{ formatMoney(pendienteClienteEdit) }}</span></label><br />
+          <button
+            type="button"
+            class="btn btn-success btn-sm"
+            :disabled="avisandoImpago"
+            @click="avisarImpagoCliente"
+          >
+            {{ avisandoImpago ? 'Enviando...' : '🔔 Avisar de pago pendiente' }}
+          </button>
+        </div>
+
         <hr style="margin: 1rem 0; border-color: var(--gris-borde)" />
         <p style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
           <strong>Propiedades asociadas</strong> — Opcional, se puede completar más tarde.
@@ -296,6 +308,8 @@ const toDelete = ref(null)
 const currentFoto = ref(null)
 const currentContrato = ref(null)
 const generandoContrato = ref(false)
+const pendienteClienteEdit = ref(0)
+const avisandoImpago = ref(false)
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api', '')
@@ -312,6 +326,10 @@ function contratoUrl(ruta) {
 function formatFecha(f) {
   if (!f) return '—'
   return new Date(f).toLocaleDateString('es-ES')
+}
+
+function formatMoney(v) {
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v || 0)
 }
 
 function todayStr() {
@@ -493,6 +511,7 @@ function openNew() {
   form.value = emptyForm()
   currentFoto.value = null
   currentContrato.value = null
+  pendienteClienteEdit.value = 0
   fianzasCliente.value = []
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
@@ -527,6 +546,10 @@ function openEdit(c) {
   formError.value = ''
   showModal.value = true
   loadFianzasCliente(c.id)
+  pendienteClienteEdit.value = 0
+  api.get(`/clientes/${c.id}/pendiente-total`)
+    .then((res) => { pendienteClienteEdit.value = Number(res.data?.pendiente_total ?? 0) })
+    .catch(() => {})
 }
 
 function confirmDelete(c) {
@@ -546,6 +569,18 @@ async function generarContratoManual() {
     alert(e.displayMessage || 'No se pudo generar el contrato. ¿Tiene el cliente algún trastero o piso asignado?')
   } finally {
     generandoContrato.value = false
+  }
+}
+
+async function avisarImpagoCliente() {
+  avisandoImpago.value = true
+  try {
+    await api.post(`/clientes/${form.value._id}/avisar-impago`)
+    alert('Aviso de pago pendiente enviado.')
+  } catch (e) {
+    alert(e.displayMessage || 'No se pudo enviar el aviso.')
+  } finally {
+    avisandoImpago.value = false
   }
 }
 

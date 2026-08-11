@@ -101,6 +101,12 @@
                     >💰 Pagar</button>
                     <button class="btn btn-info btn-sm" title="Ver detalle" @click="openDetalle(p)">📋 Ver</button>
                     <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
+                    <button
+                      class="btn btn-success btn-sm"
+                      title="Enviar email recordando el pago pendiente"
+                      :disabled="avisandoIds.has(p.id)"
+                      @click="avisarImpago(p)"
+                    >🔔</button>
                   </div>
                 </td>
               </tr>
@@ -250,6 +256,7 @@ const pendTipo       = ref('')
 const pendPage       = ref(1)
 const pendPerPage    = ref(DEFAULT_PER_PAGE)
 const pendPagination = ref({ total: 0, last_page: 1, from: 0, to: 0 })
+const avisandoIds = ref(new Set())
 
 // Modales
 const showPagoModal    = ref(false)
@@ -383,6 +390,19 @@ async function enviarReciboDetalleEmail(pago, detalle) {
     await api.post('/pagos-alquiler/enviar-recibo-email', { pago_id: pago.id, detalle_id: detalle.id })
   } catch (e) {
     console.error('Error al enviar el email', e)
+  }
+}
+
+async function avisarImpago(p) {
+  avisandoIds.value = new Set(avisandoIds.value).add(p.id)
+  try {
+    await api.post(`/pagos-alquiler/${p.id}/avisar-impago`)
+  } catch (e) {
+    alert(e.displayMessage || 'No se pudo enviar el aviso (¿tiene el cliente email registrado?)')
+  } finally {
+    const next = new Set(avisandoIds.value)
+    next.delete(p.id)
+    avisandoIds.value = next
   }
 }
 

@@ -27,6 +27,7 @@ Route::get('busqueda', [BusquedaController::class, 'buscar']);
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
 Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
 Route::post('clientes/{cliente}/contrato', [ClienteController::class, 'generarContrato']);
+Route::post('clientes/{cliente}/avisar-impago', [ClienteController::class, 'avisarImpago']);
 Route::apiResource('clientes', ClienteController::class);
 
 // Fianzas
@@ -49,6 +50,8 @@ Route::delete('pagos-alquiler/{pagoAlquiler}', [PagoAlquilerController::class, '
 Route::post('pagos-alquiler/registrar-pago', [PagoAlquilerController::class, 'registrarPago']);
 Route::delete('pagos-alquiler/{pagoAlquiler}/detalles/{detalle}', [PagoAlquilerController::class, 'eliminarDetalle']);
 Route::post('pagos-alquiler/enviar-recibo-email', [PagoAlquilerController::class, 'enviarReciboEmail']);
+Route::post('pagos-alquiler/avisar-impagos-todos', [PagoAlquilerController::class, 'avisarImpagosTodos']);
+Route::post('pagos-alquiler/{pagoAlquiler}/avisar-impago', [PagoAlquilerController::class, 'avisarImpago']);
 
 // Gastos
 Route::post('gastos/enviar-recibo-email', [GastoController::class, 'enviarReciboEmail']);

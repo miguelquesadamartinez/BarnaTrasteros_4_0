@@ -6,6 +6,7 @@ import TrasterosView from '@/views/trasteros/TrasterosView.vue'
 import PisosView from '@/views/pisos/PisosView.vue'
 import ClientesView from '@/views/clientes/ClientesView.vue'
 import ListaEsperaView from '@/views/lista-espera/ListaEsperaView.vue'
+import AvisarImpagosView from '@/views/contabilidad/AvisarImpagosView.vue'
 import FianzasView from '@/views/fianzas/FianzasView.vue'
 import PagosView from '@/views/pagos/PagosView.vue'
 import GastosView from '@/views/gastos/GastosView.vue'
@@ -26,6 +27,7 @@ const routes = [
   { path: '/fianzas/devueltas', name: 'fianzas-devueltas', component: FianzasView, meta: { title: 'Fianzas Devueltas' }, props: { soloDevueltas: true } },
   { path: '/pagos', name: 'pagos', component: PagosView, meta: { title: 'Pagos' } },
   { path: '/gastos', name: 'gastos', component: GastosView, meta: { title: 'Gastos' } },
+  { path: '/contabilidad/avisar-impagos', name: 'avisar-impagos', component: AvisarImpagosView, meta: { title: 'Avisar Impagos' } },
   { path: '/relatorios', name: 'relatorios', component: RelatoriosView, meta: { title: 'Relatorios' } },
   { path: '/mantenimiento/tamanyo-trasteros', name: 'tamanyo-trasteros', component: TamanyosTrasterosView, meta: { title: 'Tamaños de Trasteros' } },
   { path: '/mantenimiento/facturas', name: 'facturas', component: FacturasView, meta: { title: 'Facturas del Mes' } },

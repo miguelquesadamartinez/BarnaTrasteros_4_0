@@ -26,6 +26,7 @@
             <li><router-link to="/pagos" @click="openMenu = null">💳 Pagos</router-link></li>
             <li><router-link to="/gastos" @click="openMenu = null">💸 Gastos</router-link></li>
             <li><router-link to="/mantenimiento/facturas" @click="openMenu = null">🧾 Facturas</router-link></li>
+            <li><router-link to="/contabilidad/avisar-impagos" @click="openMenu = null">📣 Avisar Impagos</router-link></li>
           </ul>
         </li>
         <li><router-link to="/relatorios">📊 Relatorios</router-link></li>

@@ -80,6 +80,29 @@ class PagoAlquilerController extends Controller
         return response()->json($data);
     }
 
+    public function avisarImpago(PagoAlquiler $pagoAlquiler): JsonResponse
+    {
+        if (!$pagoAlquiler->enviarAvisoImpago()) {
+            return response()->json(['message' => 'El cliente no tiene email registrado'], 422);
+        }
+
+        return response()->json(['message' => 'Aviso enviado']);
+    }
+
+    public function avisarImpagosTodos(): JsonResponse
+    {
+        $pagos = PagoAlquiler::with('cliente')->whereIn('estado', ['pendiente', 'parcial'])->get();
+
+        $enviados = 0;
+        foreach ($pagos as $pago) {
+            if ($pago->enviarAvisoImpago()) {
+                $enviados++;
+            }
+        }
+
+        return response()->json(['enviados' => $enviados, 'total' => $pagos->count()]);
+    }
+
     /**
      * Registrar un pago - distribuye automáticamente entre TODOS los meses pendientes del cliente
      * (pisos y trasteros), ordenados del más antiguo al más reciente.

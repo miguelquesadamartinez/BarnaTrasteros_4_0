@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Mail\AvisoImpagoMail;
 use App\Mail\ReporteImpagosMail;
 use App\Models\PagoAlquiler;
 use Carbon\Carbon;
@@ -38,23 +37,13 @@ class AvisarImpagos implements ShouldQueue
             }
 
             $cliente = $pago->cliente;
-            if (!$cliente || !$cliente->email) {
+            if (!$pago->enviarAvisoImpago()) {
                 Log::info("AvisarImpagos: pago {$pago->id} sin cliente/email, se omite el aviso individual.");
                 continue;
             }
 
             $pendiente = max(0, (float) $pago->importe_total - (float) $pago->pagado);
             $mesNombre = ucfirst(Carbon::create()->month($pago->mes)->locale('es')->monthName);
-
-            Mail::to($cliente->email)->queue(new AvisoImpagoMail(
-                $cliente->toArray(),
-                $pago->toArray(),
-                $mesNombre,
-                $pendiente
-            ));
-
-            $pago->aviso_impago_enviado_at = now();
-            $pago->save();
 
             $impagosParaReporte[] = [
                 'cliente_nombre' => trim("{$cliente->nombre} {$cliente->apellido}"),

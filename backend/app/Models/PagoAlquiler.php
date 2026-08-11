@@ -56,4 +56,28 @@ class PagoAlquiler extends Model
         }
         $this->save();
     }
+
+    public function enviarAvisoImpago(): bool
+    {
+        $this->loadMissing('cliente');
+
+        if (!$this->cliente || !$this->cliente->email) {
+            return false;
+        }
+
+        $pendiente = max(0, (float) $this->importe_total - (float) $this->pagado);
+        $mesNombre = ucfirst(\Carbon\Carbon::create()->month($this->mes)->locale('es')->monthName);
+
+        \Illuminate\Support\Facades\Mail::to($this->cliente->email)->queue(new \App\Mail\AvisoImpagoMail(
+            $this->cliente->toArray(),
+            $this->toArray(),
+            $mesNombre,
+            $pendiente
+        ));
+
+        $this->aviso_impago_enviado_at = now();
+        $this->save();
+
+        return true;
+    }
 }
