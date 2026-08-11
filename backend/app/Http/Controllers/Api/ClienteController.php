@@ -162,21 +162,11 @@ class ClienteController extends Controller
 
     public function avisarImpago(Cliente $cliente): JsonResponse
     {
-        $pagos = $cliente->pagosAlquiler()->whereIn('estado', ['pendiente', 'parcial'])->get();
-
-        $enviados = 0;
-        foreach ($pagos as $pago) {
-            $pago->setRelation('cliente', $cliente);
-            if ($pago->enviarAvisoImpago()) {
-                $enviados++;
-            }
-        }
-
-        if ($enviados === 0) {
+        if (!$cliente->enviarAvisoImpago()) {
             return response()->json(['message' => 'El cliente no tiene pagos pendientes o no tiene email registrado'], 422);
         }
 
-        return response()->json(['enviados' => $enviados]);
+        return response()->json(['message' => 'Aviso enviado']);
     }
 
     public function pendienteTotal(Request $request, int $id): JsonResponse

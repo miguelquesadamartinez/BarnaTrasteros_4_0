@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cliente;
 use App\Models\DetallePagoAlquiler;
 use App\Models\PagoAlquiler;
 use Illuminate\Http\JsonResponse;
@@ -82,7 +83,9 @@ class PagoAlquilerController extends Controller
 
     public function avisarImpago(PagoAlquiler $pagoAlquiler): JsonResponse
     {
-        if (!$pagoAlquiler->enviarAvisoImpago()) {
+        $pagoAlquiler->loadMissing('cliente');
+
+        if (!$pagoAlquiler->cliente || !$pagoAlquiler->cliente->enviarAvisoImpago()) {
             return response()->json(['message' => 'El cliente no tiene email registrado'], 422);
         }
 
@@ -91,16 +94,18 @@ class PagoAlquilerController extends Controller
 
     public function avisarImpagosTodos(): JsonResponse
     {
-        $pagos = PagoAlquiler::with('cliente')->whereIn('estado', ['pendiente', 'parcial'])->get();
+        $clienteIds = PagoAlquiler::whereIn('estado', ['pendiente', 'parcial'])
+            ->distinct()
+            ->pluck('cliente_id');
 
         $enviados = 0;
-        foreach ($pagos as $pago) {
-            if ($pago->enviarAvisoImpago()) {
+        foreach (Cliente::whereIn('id', $clienteIds)->get() as $cliente) {
+            if ($cliente->enviarAvisoImpago()) {
                 $enviados++;
             }
         }
 
-        return response()->json(['enviados' => $enviados, 'total' => $pagos->count()]);
+        return response()->json(['enviados' => $enviados, 'total' => $clienteIds->count()]);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\ReporteImpagosMail;
+use App\Models\Cliente;
 use App\Models\PagoAlquiler;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -22,42 +23,52 @@ class AvisarImpagos implements ShouldQueue
 
     public function handle(): void
     {
-        $pagos = PagoAlquiler::with('cliente')
-            ->whereIn('estado', ['pendiente', 'parcial'])
+        // Clientes con al menos un pago que ya cumple los 5 días de margen y no se ha avisado aún.
+        $clienteIds = PagoAlquiler::whereIn('estado', ['pendiente', 'parcial'])
             ->whereNull('aviso_impago_enviado_at')
-            ->get();
+            ->get()
+            ->filter(function (PagoAlquiler $pago) {
+                $fechaAviso = Carbon::create($pago->anyo, $pago->mes, 5)->addDays(self::DIAS_MARGEN);
+                return Carbon::now()->gte($fechaAviso);
+            })
+            ->pluck('cliente_id')
+            ->unique();
 
         $impagosParaReporte = [];
         $totalPendiente = 0.0;
+        $clientesAvisados = 0;
 
-        foreach ($pagos as $pago) {
-            $fechaAviso = Carbon::create($pago->anyo, $pago->mes, 5)->addDays(self::DIAS_MARGEN);
-            if (Carbon::now()->lt($fechaAviso)) {
+        foreach ($clienteIds as $clienteId) {
+            $cliente = Cliente::find($clienteId);
+            if (!$cliente) {
                 continue;
             }
 
-            $cliente = $pago->cliente;
-            if (!$pago->enviarAvisoImpago()) {
-                Log::info("AvisarImpagos: pago {$pago->id} sin cliente/email, se omite el aviso individual.");
+            // Todos los pagos pendientes del cliente (para el reporte interno), antes de marcarlos avisados.
+            $pendientes = $cliente->pagosAlquiler()->whereIn('estado', ['pendiente', 'parcial'])->get();
+
+            if (!$cliente->enviarAvisoImpago()) {
+                Log::info("AvisarImpagos: cliente {$clienteId} sin email, se omite.");
                 continue;
             }
+            $clientesAvisados++;
 
-            $pendiente = max(0, (float) $pago->importe_total - (float) $pago->pagado);
-            $mesNombre = ucfirst(Carbon::create()->month($pago->mes)->locale('es')->monthName);
-
-            $impagosParaReporte[] = [
-                'cliente_nombre' => trim("{$cliente->nombre} {$cliente->apellido}"),
-                'cliente_dni' => $cliente->dni,
-                'tipo' => $pago->tipo,
-                'numero' => $pago->numero ?? $pago->referencia_id,
-                'mesNombre' => $mesNombre,
-                'anyo' => $pago->anyo,
-                'pendiente' => $pendiente,
-            ];
-            $totalPendiente += $pendiente;
+            foreach ($pendientes as $pago) {
+                $pendiente = max(0, (float) $pago->importe_total - (float) $pago->pagado);
+                $impagosParaReporte[] = [
+                    'cliente_nombre' => trim("{$cliente->nombre} {$cliente->apellido}"),
+                    'cliente_dni' => $cliente->dni,
+                    'tipo' => $pago->tipo,
+                    'numero' => $pago->numero ?? $pago->referencia_id,
+                    'mesNombre' => ucfirst(Carbon::create()->month($pago->mes)->locale('es')->monthName),
+                    'anyo' => $pago->anyo,
+                    'pendiente' => $pendiente,
+                ];
+                $totalPendiente += $pendiente;
+            }
         }
 
-        Log::info('AvisarImpagos: ' . count($impagosParaReporte) . ' avisos de impago enviados.');
+        Log::info("AvisarImpagos: avisos enviados a {$clientesAvisados} clientes.");
 
         if (count($impagosParaReporte) > 0) {
             $destinatario = (string) config('mail.reportes.pagos_to');

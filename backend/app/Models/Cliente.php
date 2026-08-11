@@ -51,4 +51,38 @@ class Cliente extends Model
     {
         return "{$this->nombre} {$this->apellido}";
     }
+
+    public function enviarAvisoImpago(): bool
+    {
+        if (!$this->email) {
+            return false;
+        }
+
+        $pagos = $this->pagosAlquiler()->whereIn('estado', ['pendiente', 'parcial'])->get();
+        if ($pagos->isEmpty()) {
+            return false;
+        }
+
+        $filas = $pagos->map(function (PagoAlquiler $pago) {
+            return [
+                'tipo' => $pago->tipo,
+                'numero' => $pago->numero ?? $pago->referencia_id,
+                'mesNombre' => ucfirst(\Carbon\Carbon::create()->month($pago->mes)->locale('es')->monthName),
+                'anyo' => $pago->anyo,
+                'pendiente' => max(0, (float) $pago->importe_total - (float) $pago->pagado),
+            ];
+        })->values();
+
+        $totalPendiente = $filas->sum('pendiente');
+
+        \Illuminate\Support\Facades\Mail::to($this->email)->queue(new \App\Mail\AvisoImpagoMail(
+            $this->toArray(),
+            $filas->toArray(),
+            $totalPendiente
+        ));
+
+        PagoAlquiler::whereIn('id', $pagos->pluck('id'))->update(['aviso_impago_enviado_at' => now()]);
+
+        return true;
+    }
 }

@@ -11,29 +11,28 @@ class AvisoImpagoMail extends Mailable
     use Queueable, SerializesModels;
 
     public $cliente;
-    public $pago;
-    public $mesNombre;
-    public $pendiente;
+    public $filas;
+    public $totalPendiente;
     public $empresa;
 
-    public function __construct($cliente, $pago, $mesNombre, $pendiente)
+    public function __construct($cliente, $filas, $totalPendiente)
     {
         $this->cliente = $cliente;
-        $this->pago = $pago;
-        $this->mesNombre = $mesNombre;
-        $this->pendiente = $pendiente;
+        $this->filas = $filas;
+        $this->totalPendiente = $totalPendiente;
         $this->empresa = config('empresa');
     }
 
     public function build()
     {
-        return $this->subject("Aviso de pago pendiente - {$this->mesNombre} {$this->pago['anyo']}")
+        $subject = count($this->filas) > 1 ? 'Aviso de pagos pendientes' : 'Aviso de pago pendiente';
+
+        return $this->subject($subject)
             ->view('emails.aviso-impago')
             ->with([
                 'cliente' => $this->cliente,
-                'pago' => $this->pago,
-                'mesNombre' => $this->mesNombre,
-                'pendiente' => $this->pendiente,
+                'filas' => $this->filas,
+                'totalPendiente' => $this->totalPendiente,
                 'empresa' => $this->empresa,
             ]);
     }
