@@ -25,6 +25,7 @@ Route::get('busqueda', [BusquedaController::class, 'buscar']);
 
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
 Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
+Route::post('clientes/{cliente}/contrato', [ClienteController::class, 'generarContrato']);
 Route::apiResource('clientes', ClienteController::class);
 
 // Fianzas

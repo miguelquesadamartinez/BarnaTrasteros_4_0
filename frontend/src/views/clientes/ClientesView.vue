@@ -140,6 +140,20 @@
           </div>
         </div>
 
+        <div v-if="editing" class="form-group">
+          <label class="form-label">Contrato de alquiler</label><br />
+          <a v-if="currentContrato" :href="contratoUrl(currentContrato)" target="_blank" class="btn btn-info btn-sm">📄 Ver contrato</a>
+          <button
+            v-else
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="generandoContrato"
+            @click="generarContratoManual"
+          >
+            {{ generandoContrato ? 'Generando...' : '📄 Generar contrato' }}
+          </button>
+        </div>
+
         <hr style="margin: 1rem 0; border-color: var(--gris-borde)" />
         <p style="font-size:.85rem;color:var(--gris-texto);margin-bottom:.75rem">
           <strong>Propiedades asociadas</strong> — Opcional, se puede completar más tarde.
@@ -280,12 +294,18 @@ const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
 const currentFoto = ref(null)
+const currentContrato = ref(null)
+const generandoContrato = ref(false)
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace('/api', '')
   : ''
 
 function fotoUrl(ruta) {
+  return `${apiBase}/storage/${ruta}`
+}
+
+function contratoUrl(ruta) {
   return `${apiBase}/storage/${ruta}`
 }
 
@@ -472,6 +492,7 @@ function openNew() {
   editing.value = false
   form.value = emptyForm()
   currentFoto.value = null
+  currentContrato.value = null
   fianzasCliente.value = []
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
@@ -500,6 +521,7 @@ function openEdit(c) {
     _clienteId: c.id,
   }
   currentFoto.value = c.foto_dni
+  currentContrato.value = c.contrato_path
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
@@ -512,7 +534,39 @@ function confirmDelete(c) {
   showDelete.value = true
 }
 
+async function generarContratoManual() {
+  const tab = window.open('', '_blank')
+  generandoContrato.value = true
+  try {
+    const { data } = await api.post(`/clientes/${form.value._id}/contrato`)
+    currentContrato.value = data.path
+    tab.location = contratoUrl(data.path)
+  } catch (e) {
+    tab.close()
+    alert(e.displayMessage || 'No se pudo generar el contrato. ¿Tiene el cliente algún trastero o piso asignado?')
+  } finally {
+    generandoContrato.value = false
+  }
+}
+
 async function save() {
+  // Se calcula ya (antes de cualquier await) si cambia el trastero/piso asignado, para decidir
+  // si hay que (re)generar el contrato sin esperar a que termine el guardado.
+  const oldTrasteroIdsPre = editing.value
+    ? trasterosStore.trasteros.filter((t) => t.cliente_id === form.value._id).map((t) => t.id)
+    : []
+  const newTrasteroIdsPre = form.value.trastero_ids
+  const trasterosChanged = oldTrasteroIdsPre.length !== newTrasteroIdsPre.length ||
+    oldTrasteroIdsPre.some((id) => !newTrasteroIdsPre.includes(id)) ||
+    newTrasteroIdsPre.some((id) => !oldTrasteroIdsPre.includes(id))
+  const prevPisoPre = editing.value ? pisosStore.pisos.find((p) => p.cliente_id === form.value._id) : null
+  const pisoChanged = (prevPisoPre?.id ?? null) !== (form.value.piso_id ?? null)
+  const unitsChanged = trasterosChanged || pisoChanged
+  const isEditingWithContract = editing.value && !!currentContrato.value
+  const shouldGenerateContract = !editing.value || (isEditingWithContract && unitsChanged)
+
+  // Se abre ya (en blanco) para conservar el gesto de usuario; se rellena luego con el PDF.
+  const contractTab = shouldGenerateContract ? window.open('', '_blank') : null
   formError.value = ''
   saving.value = true
   try {
@@ -588,10 +642,22 @@ async function save() {
     }
     pendingFianzas.value = []
 
+    // Generar contrato al crear cliente, o regenerarlo si ya tenía uno y cambió el trastero/piso asignado
+    if (contractTab) {
+      try {
+        const { data } = await api.post(`/clientes/${cliente.id}/contrato`)
+        currentContrato.value = data.path
+        contractTab.location = contratoUrl(data.path)
+      } catch (e) {
+        contractTab.close()
+      }
+    }
+
     showModal.value = false
     // Refrescar clientes para reflejar relaciones
     await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
   } catch (e) {
+    if (contractTab) contractTab.close()
     formError.value = e.displayMessage || 'Error al guardar'
   } finally {
     saving.value = false

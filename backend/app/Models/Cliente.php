@@ -16,6 +16,7 @@ class Cliente extends Model
         'dni',
         'email',
         'foto_dni',
+        'contrato_path',
         'direccion',
         'codigo_postal',
         'ciudad',

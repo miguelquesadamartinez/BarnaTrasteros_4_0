@@ -128,6 +128,38 @@ class ClienteController extends Controller
         return response()->json(['message' => 'Cliente eliminado correctamente']);
     }
 
+    public function generarContrato(Cliente $cliente): JsonResponse
+    {
+        $cliente->load(['trasteros', 'pisos', 'fianzas']);
+
+        if ($cliente->trasteros->isEmpty() && $cliente->pisos->isEmpty()) {
+            return response()->json(['message' => 'El cliente no tiene ninguna unidad asignada'], 422);
+        }
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('contratos.alquiler', [
+            'cliente' => $cliente->toArray(),
+            'trasteros' => $cliente->trasteros->toArray(),
+            'pisos' => $cliente->pisos->toArray(),
+            'fianzas' => $cliente->fianzas->where('devuelta', false)->values()->toArray(),
+            'empresa' => config('empresa'),
+        ]);
+        $pdfData = $pdf->output();
+
+        if ($cliente->contrato_path) {
+            Storage::disk('public')->delete($cliente->contrato_path);
+        }
+
+        $path = "clientes/contratos/cliente-{$cliente->id}-" . now()->format('YmdHis') . '.pdf';
+        Storage::disk('public')->put($path, $pdfData);
+
+        $cliente->update(['contrato_path' => $path]);
+
+        Cache::tags(['clientes'])->flush();
+
+        return response()->json(['path' => $path]);
+    }
+
     public function pendienteTotal(Request $request, int $id): JsonResponse
     {
         $pendiente = Cache::tags(['clientes', 'pagos-alquiler'])->remember("clientes:pendiente:{$id}", now()->addMinutes(10), function () use ($id) {
