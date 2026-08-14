@@ -54,13 +54,33 @@ docker compose exec backend php artisan db:backup
 docker compose up -d
 ```
 
-En el primer arranque se ejecutan `migrate` y `db:seed` automáticamente. Servicios expuestos:
+Servicios expuestos:
 
 | Servicio | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
 | API backend | http://localhost:8000/api |
 | phpMyAdmin | http://localhost:8080 (usuario `barnauser` / `barnapass`) |
+
+Las migraciones y los datos iniciales **no se cargan solos** — la primera vez (o tras un `migrate:fresh`) hay que lanzarlos a mano:
+
+```bash
+# Crea las tablas + carga solo el catálogo de tamaños de trastero (seeder por defecto)
+docker compose exec backend php artisan migrate --seed
+```
+
+Para tener una base de pruebas con datos de ejemplo (20 clientes, trasteros, pisos, pagos y gastos) en vez de la mínima:
+
+```bash
+docker compose exec backend php artisan db:seed --class="Database\Seeders\DemoDataSeeder" --force
+```
+
+Cada seeder trunca y regenera solo las tablas que le corresponden (no son acumulativos):
+
+| Seeder | Qué carga | Cuándo usarlo |
+|---|---|---|
+| `TamanyoTrasteroSeeder` (por defecto, vía `DatabaseSeeder`) | Solo el catálogo de tamaños de trastero | Base real, arranque limpio |
+| `DemoDataSeeder` | Todo lo anterior + 20 clientes, 15 trasteros, 5 pisos, 45 pagos y 20 gastos de ejemplo | Base de datos local de pruebas |
 
 Parar los servicios:
 
