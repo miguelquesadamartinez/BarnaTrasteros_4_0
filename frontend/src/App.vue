@@ -34,7 +34,6 @@
           <button class="nav-dropdown-toggle" @click="toggleMenu('mantenimiento')">⚙️ Mantenimiento ▾</button>
           <ul class="nav-dropdown-menu">
             <li><router-link to="/mantenimiento/tamanyo-trasteros" @click="openMenu = null">📐 Tamaños de Trasteros</router-link></li>
-            <li><router-link to="/mantenimiento/facturas" @click="openMenu = null">🧾 Facturas del Mes</router-link></li>
             <li><router-link to="/mantenimiento/generar-pagos" @click="openMenu = null">🧮 Generar Pagos</router-link></li>
             <li><router-link to="/mantenimiento/backup" @click="openMenu = null">💾 Backup BD</router-link></li>
           </ul>
