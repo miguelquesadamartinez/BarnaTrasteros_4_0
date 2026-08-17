@@ -36,11 +36,12 @@
                 <th>Mes/Año</th>
                 <th>Estado</th>
                 <th>Pendiente</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="pagos.length === 0">
-                <td colspan="6" class="text-center text-muted" style="padding:2rem">No hay pagos pendientes</td>
+                <td colspan="7" class="text-center text-muted" style="padding:2rem">No hay pagos pendientes</td>
               </tr>
               <tr v-for="(p, index) in pagos" :key="p.id">
                 <td class="text-muted">{{ index + 1 }}</td>
@@ -49,10 +50,19 @@
                 <td>{{ mesNombre(p.mes) }} {{ p.anyo }}</td>
                 <td><span class="badge" :class="estadoBadge(p.estado)">{{ p.estado }}</span></td>
                 <td class="text-danger"><strong>{{ formatMoney(calcPendiente(p)) }}</strong></td>
+                <td>
+                  <button
+                    class="btn btn-success btn-sm"
+                    title="Enviar aviso solo a este cliente"
+                    :disabled="avisandoClienteIds.has(p.cliente_id)"
+                    @click="avisarCliente(p)"
+                  >🔔</button>
+                </td>
               </tr>
               <tr class="totals-row" v-if="pagos.length > 0">
                 <td colspan="5" class="text-right"><strong>Total ({{ pagos.length }} pagos):</strong></td>
                 <td>{{ formatMoney(totalPendiente) }}</td>
+                <td></td>
               </tr>
             </tbody>
           </table>
@@ -81,8 +91,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useToast } from 'vue-toastification'
 import api from '@/api'
 import AppModal from '@/components/AppModal.vue'
+
+const toast = useToast()
 
 const pagos = ref([])
 const loading = ref(false)
@@ -90,6 +103,7 @@ const error = ref('')
 const showConfirm = ref(false)
 const enviando = ref(false)
 const resultado = ref('')
+const avisandoClienteIds = ref(new Set())
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 function mesNombre(m) { return MESES[m] || m }
@@ -128,11 +142,26 @@ async function enviarATodos() {
   try {
     const { data } = await api.post('/pagos-alquiler/avisar-impagos-todos')
     resultado.value = `Se han enviado ${data.enviados} de ${data.total} avisos.`
+    toast.success('Avisos en cola de envío — llegarán en breve')
   } catch (e) {
     resultado.value = ''
-    alert(e.displayMessage || 'Error al enviar los avisos')
+    toast.error(e.displayMessage || 'Error al enviar los avisos')
   } finally {
     enviando.value = false
+  }
+}
+
+async function avisarCliente(p) {
+  avisandoClienteIds.value = new Set(avisandoClienteIds.value).add(p.cliente_id)
+  try {
+    await api.post(`/clientes/${p.cliente_id}/avisar-impago`)
+    toast.success('Aviso de pago pendiente en cola de envío — llegará en breve')
+  } catch (e) {
+    toast.error(e.displayMessage || 'No se pudo enviar el aviso a este cliente')
+  } finally {
+    const next = new Set(avisandoClienteIds.value)
+    next.delete(p.cliente_id)
+    avisandoClienteIds.value = next
   }
 }
 

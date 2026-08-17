@@ -236,6 +236,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useToast } from 'vue-toastification'
 import api from '@/api'
 import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
@@ -243,6 +244,7 @@ import { usePdfRecibo } from '@/composables/usePdfRecibo'
 import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
 const { generarReciboPago, generarReciboPagoTotal } = usePdfRecibo()
+const toast = useToast()
 
 const resumen = ref({})
 const loading = ref(true)
@@ -397,8 +399,9 @@ async function avisarImpago(p) {
   avisandoIds.value = new Set(avisandoIds.value).add(p.id)
   try {
     await api.post(`/pagos-alquiler/${p.id}/avisar-impago`)
+    toast.success('Aviso de pago pendiente en cola de envío — llegará en breve')
   } catch (e) {
-    alert(e.displayMessage || 'No se pudo enviar el aviso (¿tiene el cliente email registrado?)')
+    toast.error(e.displayMessage || 'No se pudo enviar el aviso (¿tiene el cliente email registrado?)')
   } finally {
     const next = new Set(avisandoIds.value)
     next.delete(p.id)

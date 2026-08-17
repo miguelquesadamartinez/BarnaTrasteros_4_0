@@ -15,6 +15,9 @@ import TamanyosTrasterosView from '@/views/mantenimiento/TamanyosTrasterosView.v
 import FacturasView from '@/views/mantenimiento/FacturasView.vue'
 import GenerarPagosView from '@/views/mantenimiento/GenerarPagosView.vue'
 import BackupView from '@/views/mantenimiento/BackupView.vue'
+import RevisionPrecioView from '@/views/mantenimiento/RevisionPrecioView.vue'
+import RevisionPrecioIndividualView from '@/views/mantenimiento/RevisionPrecioIndividualView.vue'
+import HistorialPreciosView from '@/views/mantenimiento/HistorialPreciosView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { title: 'Inicio' } },
@@ -33,6 +36,9 @@ const routes = [
   { path: '/mantenimiento/facturas', name: 'facturas', component: FacturasView, meta: { title: 'Facturas del Mes' } },
   { path: '/mantenimiento/generar-pagos', name: 'generar-pagos', component: GenerarPagosView, meta: { title: 'Generar Pagos' } },
   { path: '/mantenimiento/backup', name: 'backup', component: BackupView, meta: { title: 'Backup BD' } },
+  { path: '/mantenimiento/revision-precio', name: 'revision-precio', component: RevisionPrecioView, meta: { title: 'Revisión de Precio' } },
+  { path: '/mantenimiento/revision-precio/individual', name: 'revision-precio-individual', component: RevisionPrecioIndividualView, meta: { title: 'Cambio de Precio Individual' } },
+  { path: '/mantenimiento/historial-precios', name: 'historial-precios', component: HistorialPreciosView, meta: { title: 'Historial de Precios' } },
 ]
 
 const router = createRouter({

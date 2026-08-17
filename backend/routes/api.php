@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ListaEsperaController;
 use App\Http\Controllers\Api\PagoAlquilerController;
 use App\Http\Controllers\Api\PisoController;
 use App\Http\Controllers\Api\RelatorioController;
+use App\Http\Controllers\Api\RevisionPrecioController;
 use App\Http\Controllers\Api\TamanyoTrasteroController;
 use App\Http\Controllers\Api\MantenimientoController;
 use App\Http\Controllers\Api\TrasteroController;
@@ -79,6 +80,13 @@ Route::delete('tamanyo-trasteros/{tamanyoTrastero}', [TamanyoTrasteroController:
 // Facturas
 Route::get('facturas', [FacturaController::class, 'index']);
 Route::post('facturas/enviar-email', [FacturaController::class, 'enviarEmail']);
+
+// Revisión de precio
+Route::prefix('revision-precio')->group(function () {
+    Route::get('historial', [RevisionPrecioController::class, 'historial']);
+    Route::post('todos', [RevisionPrecioController::class, 'aplicarTodos']);
+    Route::post('individual', [RevisionPrecioController::class, 'aplicarIndividual']);
+});
 
 // Mantenimiento - acciones
 Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);

@@ -75,6 +75,13 @@ Para tener una base de pruebas con datos de ejemplo (20 clientes, trasteros, pis
 docker compose exec backend php artisan db:seed --class="Database\Seeders\DemoDataSeeder" --force
 ```
 
+```bash
+# Regenera la base de dato con dato de prueba
+docker compose exec backend php artisan migrate:fresh --seed --seeder="Database\Seeders\DemoDataSeeder"
+```
+
+> `migrate:fresh` (o restaurar un backup) modifica la base de datos por debajo de Eloquent y **no invalida la caché de Redis** — después de cualquiera de los dos, ejecuta `docker compose exec backend php artisan cache:clear` o los listados seguirán mostrando datos antiguos.
+
 Cada seeder trunca y regenera solo las tablas que le corresponden (no son acumulativos):
 
 | Seeder | Qué carga | Cuándo usarlo |

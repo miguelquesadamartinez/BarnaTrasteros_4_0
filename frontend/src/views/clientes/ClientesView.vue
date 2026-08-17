@@ -280,6 +280,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useToast } from 'vue-toastification'
 import { useClientesStore } from '@/stores/clientes'
 import { useTrasterosStore } from '@/stores/trasteros'
 import { usePisosStore } from '@/stores/pisos'
@@ -291,6 +292,7 @@ import api from '@/api'
 import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
 
 const route = useRoute()
+const toast = useToast()
 const store = useClientesStore()
 const trasterosStore = useTrasterosStore()
 const pisosStore = usePisosStore()
@@ -576,9 +578,9 @@ async function avisarImpagoCliente() {
   avisandoImpago.value = true
   try {
     await api.post(`/clientes/${form.value._id}/avisar-impago`)
-    alert('Aviso de pago pendiente enviado.')
+    toast.success('Aviso de pago pendiente en cola de envío — llegará en breve')
   } catch (e) {
-    alert(e.displayMessage || 'No se pudo enviar el aviso.')
+    toast.error(e.displayMessage || 'No se pudo enviar el aviso.')
   } finally {
     avisandoImpago.value = false
   }

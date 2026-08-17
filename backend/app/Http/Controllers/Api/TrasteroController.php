@@ -12,28 +12,22 @@ class TrasteroController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $cacheKey = 'trasteros:list:' . md5(serialize($request->only(['search', 'libre'])));
+        $query = Trastero::with('cliente');
 
-        $trasteros = Cache::tags(['trasteros'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
-            $query = Trastero::with('cliente');
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('numero', 'like', "%{$search}%")
+                  ->orWhere('piso', 'like', "%{$search}%")
+                  ->orWhere('tamanyo', 'like', "%{$search}%");
+            });
+        }
 
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('numero', 'like', "%{$search}%")
-                      ->orWhere('piso', 'like', "%{$search}%")
-                      ->orWhere('tamanyo', 'like', "%{$search}%");
-                });
-            }
+        if ($request->has('libre') && $request->libre == '1') {
+            $query->whereNull('cliente_id');
+        }
 
-            if ($request->has('libre') && $request->libre == '1') {
-                $query->whereNull('cliente_id');
-            }
-
-            return $query->orderBy('numero')->get();
-        });
-
-        return response()->json($trasteros);
+        return response()->json($query->orderBy('numero')->get());
     }
 
     public function store(Request $request): JsonResponse
