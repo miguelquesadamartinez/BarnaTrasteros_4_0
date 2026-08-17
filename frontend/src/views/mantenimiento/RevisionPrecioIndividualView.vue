@@ -40,12 +40,15 @@
                   class="form-control" type="number" step="0.01" min="0"
                 />
               </td>
-              <td style="max-width:100px">
-                <input
-                  :value="porcentajes[claveDe(u)]"
-                  @input="onPorcentajeInput(u, $event.target.value)"
-                  class="form-control" type="number" step="0.1"
-                /> %
+              <td style="max-width:120px">
+                <div style="display:flex; align-items:center; gap:0.25rem">
+                  <input
+                    :value="porcentajes[claveDe(u)]"
+                    @input="onPorcentajeInput(u, $event.target.value)"
+                    class="form-control" type="number" step="0.1"
+                  />
+                  <span>%</span>
+                </div>
               </td>
               <td>
                 <button
