@@ -6,6 +6,7 @@
       :placeholder="placeholder"
       v-model="query"
       @focus="open = true"
+      @click="open = true"
       @input="open = true"
       :disabled="disabled"
       autocomplete="off"

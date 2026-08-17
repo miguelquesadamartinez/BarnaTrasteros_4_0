@@ -250,7 +250,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Tipo *</label>
-            <select v-model="newForm.tipo" class="form-control" required>
+            <select v-model="newForm.tipo" class="form-control" required @change="onTipoManualChange">
               <option value="">Selecciona...</option>
               <option value="trastero">Trastero</option>
               <option value="piso">Piso</option>
@@ -259,15 +259,15 @@
           <div class="form-group">
             <label class="form-label">Referencia (ID) *</label>
             <SearchSelect
-              v-model="newForm.referencia_id"
-              :options="newForm.tipo === 'trastero' ? trasteroOptions : pisoOptions"
+              v-model="referenciaSelectValue"
+              :options="referenciaOptions"
               placeholder="Buscar..."
             />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Cliente *</label>
-          <SearchSelect v-model="newForm.cliente_id" :options="clienteOptions" placeholder="Buscar cliente..." />
+          <SearchSelect v-model="clienteSelectValue" :options="clienteOptions" placeholder="Buscar cliente..." />
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -351,7 +351,7 @@ const lastPagoDetalle = ref(null)
 const newError = ref('')
 
 const pagoForm = ref({ importe: 0, fecha_pago: today(), notas: '' })
-const newForm = ref({ tipo: 'trastero', referencia_id: null, cliente_id: null, mes: new Date().getMonth() + 1, anyo: new Date().getFullYear(), importe_total: 0 })
+const newForm = ref({ tipo: '', referencia_id: null, cliente_id: null, mes: new Date().getMonth() + 1, anyo: new Date().getFullYear(), importe_total: 0 })
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -390,12 +390,65 @@ const pendienteTotalCliente = ref(0)
 const clienteOptions = computed(() =>
   clientesStore.clientes.map((c) => ({ value: c.id, label: `${c.nombre} ${c.apellido} — ${c.dni}` }))
 )
-const trasteroOptions = computed(() =>
-  trasterosStore.trasteros.map((t) => ({ value: t.id, label: `${t.numero} — ${t.piso}` }))
-)
-const pisoOptions = computed(() =>
-  pisosStore.pisos.map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
-)
+function onTipoManualChange() {
+  newForm.value.referencia_id = null
+  newForm.value.cliente_id = null
+}
+
+const referenciaOptions = computed(() => {
+  const trasteroOpts = trasterosStore.trasteros.map((t) => ({ value: `t:${t.id}`, label: `📦 ${t.numero} — ${t.piso}` }))
+  const pisoOpts = pisosStore.pisos.map((p) => ({ value: `p:${p.id}`, label: `🏠 ${p.numero} — ${p.piso}` }))
+  if (newForm.value.tipo === 'trastero') return trasteroOpts
+  if (newForm.value.tipo === 'piso') return pisoOpts
+  return [...trasteroOpts, ...pisoOpts]
+})
+
+const referenciaSelectValue = computed({
+  get() {
+    if (!newForm.value.referencia_id || !newForm.value.tipo) return null
+    return newForm.value.tipo === 'trastero' ? `t:${newForm.value.referencia_id}` : `p:${newForm.value.referencia_id}`
+  },
+  set(val) {
+    if (!val) {
+      newForm.value.tipo = ''
+      newForm.value.referencia_id = null
+      newForm.value.cliente_id = null
+      return
+    }
+    const [prefix, idStr] = val.split(':')
+    const id = Number(idStr)
+    const tipo = prefix === 't' ? 'trastero' : 'piso'
+    const list = tipo === 'trastero' ? trasterosStore.trasteros : pisosStore.pisos
+    const item = list.find((x) => x.id === id)
+    newForm.value.tipo = tipo
+    newForm.value.referencia_id = id
+    newForm.value.cliente_id = item?.cliente_id ?? null
+  },
+})
+
+const clienteSelectValue = computed({
+  get() {
+    return newForm.value.cliente_id
+  },
+  set(val) {
+    if (!val) {
+      newForm.value.tipo = ''
+      newForm.value.referencia_id = null
+      newForm.value.cliente_id = null
+      return
+    }
+    newForm.value.cliente_id = val
+    const trastero = trasterosStore.trasteros.find((t) => t.cliente_id === val)
+    const piso = pisosStore.pisos.find((p) => p.cliente_id === val)
+    if (trastero && !piso) {
+      newForm.value.tipo = 'trastero'
+      newForm.value.referencia_id = trastero.id
+    } else if (piso && !trastero) {
+      newForm.value.tipo = 'piso'
+      newForm.value.referencia_id = piso.id
+    }
+  },
+})
 
 let clienteTimer = null
 function onClienteSearch() {
@@ -477,7 +530,7 @@ async function doEliminarDetalle(detalle) {
 }
 
 function openNewPago() {
-  newForm.value = { tipo: 'trastero', referencia_id: null, cliente_id: null, mes: new Date().getMonth() + 1, anyo: new Date().getFullYear(), importe_total: 0 }
+  newForm.value = { tipo: '', referencia_id: null, cliente_id: null, mes: new Date().getMonth() + 1, anyo: new Date().getFullYear(), importe_total: 0 }
   newError.value = ''
   showNewModal.value = true
 }
