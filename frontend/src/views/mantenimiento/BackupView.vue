@@ -17,9 +17,15 @@
       <div v-if="backupResult" :class="backupResult.ok ? 'alert alert-success' : 'alert alert-danger'" style="margin-bottom:1rem">
         {{ backupResult.ok ? '✅' : '❌' }} {{ backupResult.mensaje || backupResult.error }}
       </div>
-      <button class="btn btn-primary" :disabled="backedUp" @click="generarBackup">
-        <span v-if="backedUp">⏳ Generando...</span>
-        <span v-else>💾 Generar backup ahora</span>
+      <div>
+        <button class="btn btn-primary" :disabled="backedUp" @click="generarBackup">
+          <span v-if="backedUp">⏳ Generando...</span>
+          <span v-else>💾 Generar backup ahora</span>
+        </button>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:.6rem" :disabled="emailingBackup" @click="enviarBackupPorEmail">
+        <span v-if="emailingBackup">⏳ Enviando...</span>
+        <span v-else>📧 Enviar backup por email</span>
       </button>
     </div>
 
@@ -104,6 +110,7 @@ import AppModal from '@/components/AppModal.vue'
 const backups            = ref([])
 const loadingBackups     = ref(false)
 const backedUp           = ref(false)
+const emailingBackup     = ref(false)
 const restoring          = ref(false)
 const deleting           = ref(false)
 const backupResult       = ref(null)
@@ -135,6 +142,20 @@ async function generarBackup() {
     backupResult.value = { ok: false, error: e.displayMessage || 'Error al generar el backup.' }
   } finally {
     backedUp.value = false
+  }
+}
+
+async function enviarBackupPorEmail() {
+  emailingBackup.value = true
+  backupResult.value = null
+  try {
+    const { data } = await api.post('/mantenimiento/backup/email')
+    backupResult.value = data
+    await cargarBackups()
+  } catch (e) {
+    backupResult.value = { ok: false, error: e.displayMessage || 'Error al enviar el backup por email.' }
+  } finally {
+    emailingBackup.value = false
   }
 }
 

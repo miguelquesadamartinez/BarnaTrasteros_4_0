@@ -92,5 +92,6 @@ Route::prefix('revision-precio')->group(function () {
 Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);
 Route::get('mantenimiento/backups',        [MantenimientoController::class, 'listarBackups']);
 Route::post('mantenimiento/backup',        [MantenimientoController::class, 'backup']);
+Route::post('mantenimiento/backup/email',  [MantenimientoController::class, 'emailBackup']);
 Route::post('mantenimiento/restore',       [MantenimientoController::class, 'restore']);
 Route::delete('mantenimiento/backup',      [MantenimientoController::class, 'deleteBackup']);

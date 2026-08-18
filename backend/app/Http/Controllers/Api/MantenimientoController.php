@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerarPagosMensuales;
+use App\Mail\BackupDatabaseMail;
 use App\Models\PagoAlquiler;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
 
 class MantenimientoController extends Controller
 {
@@ -98,6 +100,46 @@ class MantenimientoController extends Controller
         return response()->json([
             'ok'      => true,
             'mensaje' => $output ?: 'Backup generado correctamente.',
+        ]);
+    }
+
+    /**
+     * Genera un backup de la base de datos y lo envía por email a EMAIL_APP_DATA.
+     */
+    public function emailBackup(): JsonResponse
+    {
+        $to = env('EMAIL_APP_DATA');
+
+        if (!$to) {
+            return response()->json(['error' => 'No se ha configurado EMAIL_APP_DATA en el .env.'], 500);
+        }
+
+        $exitCode = Artisan::call('db:backup');
+
+        if ($exitCode !== 0) {
+            return response()->json(['error' => 'Error al generar el backup.'], 500);
+        }
+
+        Cache::forget('mantenimiento:backups');
+
+        $dir   = base_path('mysql_bk');
+        $files = File::isDirectory($dir) ? glob($dir . '/*.sql.gz') : [];
+        rsort($files);
+        $filepath = $files[0] ?? null;
+
+        if (!$filepath || !file_exists($filepath)) {
+            return response()->json(['error' => 'No se ha podido localizar el backup generado.'], 500);
+        }
+
+        try {
+            Mail::to($to)->send(new BackupDatabaseMail($filepath));
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Backup generado pero no se pudo enviar el email: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => "Backup generado y enviado por email a {$to}.",
         ]);
     }
 
