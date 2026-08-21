@@ -79,6 +79,12 @@ class TrasteroController extends Controller
 
     public function destroy(Trastero $trastero): JsonResponse
     {
+        if ($trastero->cliente_id !== null) {
+            return response()->json([
+                'message' => 'No se puede eliminar el trastero: tiene un cliente asignado. Da de baja al cliente primero.',
+            ], 422);
+        }
+
         $trastero->delete();
 
         Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();

@@ -76,6 +76,12 @@ class PisoController extends Controller
 
     public function destroy(Piso $piso): JsonResponse
     {
+        if ($piso->cliente_id !== null) {
+            return response()->json([
+                'message' => 'No se puede eliminar el piso: tiene un cliente asignado. Da de baja al cliente primero.',
+            ], 422);
+        }
+
         $piso->delete();
 
         Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
