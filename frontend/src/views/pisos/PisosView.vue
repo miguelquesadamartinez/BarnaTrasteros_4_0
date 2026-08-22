@@ -50,6 +50,7 @@
               <td>
                 <div class="actions-cell">
                   <button class="btn btn-warning btn-sm" title="Editar piso" @click="openEdit(p)">✏️ Editar</button>
+                  <button v-if="p.cliente_id" class="btn btn-secondary btn-sm" title="Dar de baja al cliente" @click="openBaja(p)">🚪 Dar de baja</button>
                   <button class="btn btn-danger btn-sm" title="Eliminar piso" @click="confirmDelete(p)">🗑️ Eliminar</button>
                 </div>
               </td>
@@ -83,7 +84,9 @@
             :options="clienteOptions"
             placeholder="Buscar cliente..."
             :allow-clear="true"
+            :disabled="editing && originalHasCliente"
           />
+          <small class="text-muted" v-if="editing && originalHasCliente">Usa "Dar de baja" en el listado para liberar esta unidad.</small>
         </div>
         <div class="form-group" v-if="form.cliente_id">
           <label class="form-label">Fecha inicio alquiler</label>
@@ -109,6 +112,34 @@
         <button class="btn btn-danger" @click="doDelete" :disabled="saving">Eliminar</button>
       </div>
     </AppModal>
+
+    <!-- Modal Dar de baja -->
+    <AppModal v-model="showBaja" title="Dar de baja" size="sm">
+      <div class="alert alert-danger" v-if="bajaError">{{ bajaError }}</div>
+      <div v-if="!bajaInfo">
+        <p>¿Dar de baja a <strong>{{ bajaTarget?.cliente?.nombre }} {{ bajaTarget?.cliente?.apellido }}</strong> del piso <strong>{{ bajaTarget?.numero }}</strong>? La unidad quedará libre.</p>
+      </div>
+      <div v-else>
+        <p>Antes de dar de baja, revisa lo pendiente para este piso:</p>
+        <ul v-if="bajaInfo.pagos_pendientes?.length">
+          <li v-for="pago in bajaInfo.pagos_pendientes" :key="'p'+pago.id">
+            Pago {{ pago.mes }}/{{ pago.anyo }}: pendiente {{ formatMoney(pago.importe_total - pago.pagado) }} ({{ pago.estado }})
+          </li>
+        </ul>
+        <ul v-if="bajaInfo.fianzas_pendientes?.length">
+          <li v-for="f in bajaInfo.fianzas_pendientes" :key="'f'+f.id">
+            Fianza sin devolver: {{ formatMoney(f.importe) }}
+          </li>
+        </ul>
+        <p class="text-muted">Puedes dar de baja igualmente; estos importes seguirán pendientes en el sistema.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" @click="showBaja = false">Cancelar</button>
+        <button class="btn btn-danger" @click="doBaja" :disabled="bajaSaving">
+          {{ bajaInfo ? 'Dar de baja de todas formas' : 'Dar de baja' }}
+        </button>
+      </div>
+    </AppModal>
   </div>
 </template>
 
@@ -131,6 +162,13 @@ const editing = ref(false)
 const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
+const originalHasCliente = ref(false)
+
+const showBaja = ref(false)
+const bajaSaving = ref(false)
+const bajaError = ref('')
+const bajaTarget = ref(null)
+const bajaInfo = ref(null)
 
 function formatDate(v) { return v ? v.split('T')[0] : '' }
 
@@ -167,6 +205,7 @@ function openNew() {
 
 function openEdit(p) {
   editing.value = true
+  originalHasCliente.value = !!p.cliente_id
   form.value = {
     numero: p.numero, piso: p.piso, precio_mensual: p.precio_mensual,
     cliente_id: p.cliente_id ?? null,
@@ -180,6 +219,30 @@ function openEdit(p) {
 function confirmDelete(p) {
   toDelete.value = p
   showDelete.value = true
+}
+
+function openBaja(p) {
+  bajaTarget.value = p
+  bajaInfo.value = null
+  bajaError.value = ''
+  showBaja.value = true
+}
+
+async function doBaja() {
+  bajaSaving.value = true
+  bajaError.value = ''
+  try {
+    const result = await store.darBajaPiso(bajaTarget.value.id, !!bajaInfo.value)
+    if (result.ok) {
+      showBaja.value = false
+    } else {
+      bajaInfo.value = result.pendientes
+    }
+  } catch (e) {
+    bajaError.value = e.displayMessage || 'Error al dar de baja'
+  } finally {
+    bajaSaving.value = false
+  }
 }
 
 async function save() {

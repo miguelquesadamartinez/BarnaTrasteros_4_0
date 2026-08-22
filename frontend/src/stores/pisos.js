@@ -38,5 +38,19 @@ export const usePisosStore = defineStore('pisos', () => {
     pisos.value = pisos.value.filter((p) => p.id !== id)
   }
 
-  return { pisos, loading, error, fetchPisos, createPiso, updatePiso, deletePiso }
+  async function darBajaPiso(id, force = false) {
+    try {
+      const { data } = await api.post(`/pisos/${id}/dar-baja`, { force })
+      const idx = pisos.value.findIndex((p) => p.id === id)
+      if (idx !== -1) pisos.value[idx] = data
+      return { ok: true }
+    } catch (e) {
+      if (e.response?.status === 409) {
+        return { ok: false, pendientes: e.response.data }
+      }
+      throw e
+    }
+  }
+
+  return { pisos, loading, error, fetchPisos, createPiso, updatePiso, deletePiso, darBajaPiso }
 })

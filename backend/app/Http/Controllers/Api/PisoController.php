@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\DaDeBajaUnidad;
 use App\Http\Controllers\Controller;
 use App\Models\Piso;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Cache;
 
 class PisoController extends Controller
 {
+    use DaDeBajaUnidad;
+
     public function index(Request $request): JsonResponse
     {
         $query = Piso::with('cliente');
@@ -72,6 +75,17 @@ class PisoController extends Controller
         Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json($piso->load('cliente'));
+    }
+
+    public function darBaja(Request $request, Piso $piso): JsonResponse
+    {
+        $response = $this->darDeBaja($request, $piso, 'piso');
+
+        if ($response->getStatusCode() === 200) {
+            Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
+        }
+
+        return $response;
     }
 
     public function destroy(Piso $piso): JsonResponse

@@ -35,9 +35,11 @@ Route::apiResource('clientes', ClienteController::class);
 Route::apiResource('fianzas', FianzaController::class);
 
 // Trasteros
+Route::post('trasteros/{trastero}/dar-baja', [TrasteroController::class, 'darBaja']);
 Route::apiResource('trasteros', TrasteroController::class);
 
 // Pisos
+Route::post('pisos/{piso}/dar-baja', [PisoController::class, 'darBaja']);
 Route::apiResource('pisos', PisoController::class);
 
 // Lista de espera

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\DaDeBajaUnidad;
 use App\Http\Controllers\Controller;
 use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Cache;
 
 class TrasteroController extends Controller
 {
+    use DaDeBajaUnidad;
+
     public function index(Request $request): JsonResponse
     {
         $query = Trastero::with('cliente');
@@ -75,6 +78,17 @@ class TrasteroController extends Controller
         Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json($trastero->load('cliente'));
+    }
+
+    public function darBaja(Request $request, Trastero $trastero): JsonResponse
+    {
+        $response = $this->darDeBaja($request, $trastero, 'trastero');
+
+        if ($response->getStatusCode() === 200) {
+            Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
+        }
+
+        return $response;
     }
 
     public function destroy(Trastero $trastero): JsonResponse
