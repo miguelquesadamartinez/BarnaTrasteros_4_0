@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\DevolucionFianzaMail;
 use App\Models\Cliente;
 use App\Models\Fianza;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class FianzaController extends Controller
@@ -104,11 +106,29 @@ class FianzaController extends Controller
             $validated['fecha_devolucion'] = null;
         }
 
+        $seAcabaDeDevolver = !$fianza->devuelta && $validated['devuelta'];
+
         $fianza->update($validated);
 
         Cache::tags(['fianzas'])->flush();
 
-        return response()->json($fianza->load('cliente'));
+        $fianza->load('cliente');
+
+        if ($seAcabaDeDevolver && $fianza->cliente?->email) {
+            $pdf = app('dompdf.wrapper');
+            $pdf->loadView('emails.devolucion-fianza', [
+                'cliente' => $fianza->cliente->toArray(),
+                'fianza' => $fianza->toArray(),
+            ]);
+
+            Mail::to($fianza->cliente->email)->queue(new DevolucionFianzaMail(
+                $fianza->cliente->toArray(),
+                $fianza->toArray(),
+                $pdf->output()
+            ));
+        }
+
+        return response()->json($fianza);
     }
 
     public function destroy(Fianza $fianza): JsonResponse

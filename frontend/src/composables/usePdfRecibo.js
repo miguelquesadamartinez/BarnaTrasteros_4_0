@@ -57,8 +57,9 @@ function drawHeader(doc, logoData) {
  * @param {string[]} infoRef      - Líneas de info de referencia (izquierda)
  * @param {Array[]}  conceptoRows - Array de [concepto, detalle, importe]
  * @param {number}   total        - Total a mostrar en la caja final
+ * @param {boolean}  notaImpuestos - Si se muestra la nota "Impuestos y gastos comunes incluidos."
  */
-async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total) {
+async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total, notaImpuestos = true) {
   const logoData = await loadLogo()
   const doc = new jsPDF()
 
@@ -133,9 +134,11 @@ async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total) {
   doc.text('TOTAL:', 130, y)
   doc.text(fmt(total), 185, y, { align: 'right' })
 
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Impuestos y gastos comunes incluidos.', 12, y + 15)
+  if (notaImpuestos) {
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Impuestos y gastos comunes incluidos.', 12, y + 15)
+  }
 
   return doc
 }
@@ -372,5 +375,31 @@ export function usePdfRecibo() {
     doc.save(`Factura ${numFactura}_${cliente.apellido.replace(/\s+/g,'_')}.pdf`)
   }
 
-  return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal, generarFacturaCliente }
+  /**
+   * Genera el comprobante de devolución de una fianza: lo abre en una pestaña
+   * nueva del navegador y además lo descarga.
+   * @param {Object} fianza - Objeto Fianza (con cliente, importe, fechas, etc.)
+   */
+  async function generarComprobanteFianza(fianza) {
+    const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const tipoLabel = fianza.tipo === 'piso' ? 'Piso' : (fianza.tipo === 'trastero' ? 'Trastero' : '')
+    const numDoc = `Nº ${fianza.id}`
+    const infoRef = [
+      fianza.cliente ? `${fianza.cliente.nombre} ${fianza.cliente.apellido}` : null,
+      fianza.cliente?.dni ? `Número identificación fiscal: ${fianza.cliente.dni}` : null,
+      fianza.numero ? `${tipoLabel} ${fianza.numero}` : null,
+    ]
+    const conceptoRows = [
+      [`Devolución fianza ${tipoLabel} ${fianza.numero ?? ''}`.trim(), `Entrega: ${fmtDate(fianza.fecha_entrega)} — Devolución: ${fmtDate(fianza.fecha_devolucion)}`, fianza.importe],
+    ]
+    if (fianza.notas) conceptoRows.push(['Notas', fianza.notas, ''])
+    const doc = await buildPdf('DEVOLUCIÓN DE FIANZA', numDoc, hoy, infoRef, conceptoRows, fianza.importe, false)
+    const nombreCliente = fianza.cliente
+      ? `${fianza.cliente.nombre}_${fianza.cliente.apellido}`.replace(/\s+/g, '_')
+      : fianza.id
+    window.open(doc.output('bloburl'), '_blank')
+    doc.save(`Devolucion_fianza_${nombreCliente}.pdf`)
+  }
+
+  return { generarReciboPago, generarReciboGasto, generarReciboPagoTotal, generarReciboGastoTotal, generarFacturaCliente, generarComprobanteFianza }
 }

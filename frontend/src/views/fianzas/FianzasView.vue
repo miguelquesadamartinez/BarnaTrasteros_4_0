@@ -160,6 +160,9 @@ import AppModal from '@/components/AppModal.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from '@/config/pagination'
+import { usePdfRecibo } from '@/composables/usePdfRecibo'
+
+const { generarComprobanteFianza } = usePdfRecibo()
 
 const props = defineProps({
   soloDevueltas: { type: Boolean, default: false },
@@ -180,6 +183,7 @@ const editing = ref(false)
 const saving = ref(false)
 const formError = ref('')
 const toDevolver = ref(null)
+const originalDevuelta = ref(false)
 
 function formatFecha(f) {
   if (!f) return '—'
@@ -284,6 +288,7 @@ function openNew() {
 
 function openEdit(f) {
   editing.value = true
+  originalDevuelta.value = !!f.devuelta
   form.value = {
     cliente_id: f.cliente_id,
     tipo: f.tipo,
@@ -323,7 +328,10 @@ async function save() {
     }
 
     if (editing.value) {
-      await store.updateFianza(form.value._id, payload)
+      const updated = await store.updateFianza(form.value._id, payload)
+      if (payload.devuelta && !originalDevuelta.value) {
+        generarComprobanteFianza(updated)
+      }
     } else {
       await store.createFianza(payload)
     }
@@ -341,7 +349,7 @@ async function doDevolver() {
   saving.value = true
   try {
     const f = toDevolver.value
-    await store.updateFianza(f.id, {
+    const updated = await store.updateFianza(f.id, {
       cliente_id: f.cliente_id,
       tipo: f.tipo,
       referencia_id: f.referencia_id,
@@ -352,6 +360,7 @@ async function doDevolver() {
       devuelta: true,
     })
     showDevolver.value = false
+    generarComprobanteFianza(updated)
     await fetchList()
   } catch (e) {
     alert(e.displayMessage || 'Error al marcar como devuelta')
