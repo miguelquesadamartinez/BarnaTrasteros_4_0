@@ -36,7 +36,10 @@
         </div>
         <div class="filter-item">
           <span class="filter-label">Año</span>
-          <input v-model="filters.anyo" class="form-control" type="number" placeholder="Año" @change="loadPagos(1)" />
+          <select v-model="filters.anyo" class="form-control" @change="loadPagos(1)">
+            <option value="">Todos</option>
+            <option v-for="a in anyoOptions" :key="a" :value="a">{{ a }}</option>
+          </select>
         </div>
         <div class="filter-item">
           <span class="filter-label">Mes</span>
@@ -331,6 +334,12 @@ function descargarReciboPago(pago, detalle) {
 }
 
 const filters = ref({ cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
+const anyoOptions = computed(() => {
+  const actual = new Date().getFullYear()
+  const anyos = []
+  for (let a = actual + 1; a >= actual - 4; a--) anyos.push(a)
+  return anyos
+})
 const currentPage = ref(1)
 const perPage = ref(DEFAULT_PER_PAGE)
 const showPagoModal = ref(false)
