@@ -74,6 +74,15 @@
                         <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;">TOTAL RECIBO</td>
                         <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;text-align:right;">{{ number_format($detalle['importe'], 2, ',', '.') }} €</td>
                     </tr>
+                    @php
+                        $pendiente = max(0, (float) ($pago['importe_total'] ?? 0) - (float) ($pago['pagado'] ?? 0));
+                    @endphp
+                    @if($pendiente > 0)
+                    <tr>
+                        <td style="padding:10px 12px;font-size:1rem;color:#b91c1c;font-weight:bold;border:1px solid #e5e7eb;">Pendiente de este mes</td>
+                        <td style="padding:10px 12px;font-size:1rem;color:#b91c1c;font-weight:bold;border:1px solid #e5e7eb;text-align:right;">{{ number_format($pendiente, 2, ',', '.') }} €</td>
+                    </tr>
+                    @endif
                 </table>
             </div>
         </div>
