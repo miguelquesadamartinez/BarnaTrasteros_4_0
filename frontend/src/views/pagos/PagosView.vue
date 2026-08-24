@@ -333,7 +333,7 @@ function descargarReciboPago(pago, detalle) {
   generarReciboPago(pago, detalle)
 }
 
-const filters = ref({ cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' })
+const filters = ref({ cliente: '', tipo: '', estado: '', anyo: '', mes: '' })
 const anyoOptions = computed(() => {
   const actual = new Date().getFullYear()
   const anyos = []
@@ -485,7 +485,7 @@ function onPerPageChange() {
 }
 
 function clearFilters() {
-  filters.value = { cliente: '', tipo: '', estado: '', anyo: new Date().getFullYear(), mes: '' }
+  filters.value = { cliente: '', tipo: '', estado: '', anyo: '', mes: '' }
   currentPage.value = 1
   loadPagos(1)
 }
