@@ -140,15 +140,19 @@
     <!-- Modal: Registrar Pago -->
     <AppModal v-model="showPagoModal" title="Registrar Pago" size="md">
       <!-- Éxito: pago registrado -->
-      <div v-if="lastPagoDetalle" class="text-center py-3">
+      <div v-if="pagoResultado" class="text-center py-3">
         <p class="text-success fw-bold mb-3">✔ Pago registrado correctamente</p>
-        <p v-if="lastPagoDetalle.sobrante > 0" class="text-muted">Sobrante no aplicado: {{ formatMoney(lastPagoDetalle.sobrante) }}</p>
-        <div class="form-actions justify-content-center">
+        <p v-if="pagoResultado.sobrante > 0" class="text-muted">Sobrante no aplicado: {{ formatMoney(pagoResultado.sobrante) }}</p>
+        <p v-if="pagoResultado.detalles.length > 1" class="text-muted" style="font-size:.85rem">El pago se ha repartido entre {{ pagoResultado.detalles.length }} mensualidades. Envía el recibo de cada una:</p>
+        <div v-for="item in pagoResultado.detalles" :key="item.detalle.id" class="d-flex align-items-center justify-content-center gap-2 mb-2">
+          <span>{{ item.pago.tipo === 'piso' ? 'Piso' : 'Trastero' }} {{ item.pago.numero ?? item.pago.referencia_id }} — {{ mesNombre(item.pago.mes) }} {{ item.pago.anyo }} ({{ formatMoney(item.detalle.importe) }})</span>
           <button
             v-if="tieneClienteAsociado(pagoTarget)"
             class="btn btn-success btn-sm"
-            @click="enviarReciboDetalleEmail(lastPagoDetalle.pago, lastPagoDetalle.detalle); showPagoModal = false"
-          >@ Enviar recibo por email</button>
+            @click="enviarReciboDetalleEmail(item.pago, item.detalle)"
+          >@ Enviar recibo</button>
+        </div>
+        <div class="form-actions justify-content-center">
           <button class="btn btn-secondary btn-sm" @click="showPagoModal = false">Cerrar</button>
         </div>
       </div>
@@ -356,7 +360,7 @@ const pagando = ref(false)
 const saving = ref(false)
 const pagoError = ref('')
 const pagoSuccess = ref('')
-const lastPagoDetalle = ref(null)
+const pagoResultado = ref(null)
 const newError = ref('')
 
 const pagoForm = ref({ importe: 0, fecha_pago: today(), notas: '' })
@@ -502,7 +506,7 @@ async function openPago(p) {
   pagoForm.value = { importe: Math.round(totalPendCliente * 100) / 100, fecha_pago: today(), notas: '' }
   pagoError.value = ''
   pagoSuccess.value = ''
-  lastPagoDetalle.value = null
+  pagoResultado.value = null
   showPagoModal.value = true
 }
 
@@ -561,11 +565,10 @@ async function registrarPago() {
       notas: pagoForm.value.notas,
     })
     pagoSuccess.value = `Pago registrado. ${result.sobrante > 0 ? `Sobrante no aplicado: ${formatMoney(result.sobrante)}` : ''}`
-    const firstUpdated = result.pagos_actualizados?.[0]
-    const ultimoDetalle = firstUpdated?.detalles?.at(-1) ?? null
-    lastPagoDetalle.value = firstUpdated && ultimoDetalle
-      ? { pago: firstUpdated, detalle: ultimoDetalle, sobrante: result.sobrante }
-      : { pago: null, detalle: null, sobrante: result.sobrante }
+    const detalles = (result.pagos_actualizados ?? [])
+      .map((pago) => ({ pago, detalle: pago.detalles?.at(-1) ?? null }))
+      .filter((item) => item.detalle !== null)
+    pagoResultado.value = { detalles, sobrante: result.sobrante }
     await loadPagos(currentPage.value)
     if (pagoTarget.value?.cliente_id) {
       pendienteTotalCliente.value = await api
