@@ -50,7 +50,16 @@
               <td>{{ Number(f.importe).toFixed(2) }} €</td>
               <td>{{ formatFecha(f.fecha_entrega) }}</td>
               <td v-if="soloDevueltas">{{ formatFecha(f.fecha_devolucion) }}</td>
-              <td>{{ f.notas || '—' }}</td>
+              <td>
+                <span v-if="!f.notas">—</span>
+                <span
+                  v-else-if="f.notas.length > 40"
+                  style="cursor:pointer;text-decoration:underline dotted"
+                  title="Ver nota completa"
+                  @click="verNota(f.notas)"
+                >{{ f.notas.slice(0, 40) }}...</span>
+                <span v-else>{{ f.notas }}</span>
+              </td>
               <td v-if="!soloDevueltas">
                 <div class="actions-cell">
                   <button class="btn btn-warning btn-sm" title="Editar fianza" @click="openEdit(f)">✏️ Editar</button>
@@ -146,6 +155,14 @@
         <button class="btn btn-danger" @click="doDevolver" :disabled="saving">Devolver</button>
       </div>
     </AppModal>
+
+    <!-- Modal Ver Nota -->
+    <AppModal v-model="showNota" title="Nota" size="sm">
+      <p style="white-space:pre-wrap">{{ notaTexto }}</p>
+      <div class="form-actions">
+        <button class="btn btn-secondary" @click="showNota = false">Cerrar</button>
+      </div>
+    </AppModal>
   </div>
 </template>
 
@@ -184,6 +201,13 @@ const saving = ref(false)
 const formError = ref('')
 const toDevolver = ref(null)
 const originalDevuelta = ref(false)
+const showNota = ref(false)
+const notaTexto = ref('')
+
+function verNota(texto) {
+  notaTexto.value = texto
+  showNota.value = true
+}
 
 function formatFecha(f) {
   if (!f) return '—'
