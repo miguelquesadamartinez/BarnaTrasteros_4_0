@@ -16,11 +16,13 @@ class Piso extends Model
         'precio_mensual',
         'cliente_id',
         'fecha_inicio_alquiler',
+        'fecha_vencimiento',
         'notas',
     ];
 
     protected $casts = [
         'fecha_inicio_alquiler' => 'date:Y-m-d',
+        'fecha_vencimiento' => 'date:Y-m-d',
         'precio_mensual' => 'decimal:2',
     ];
 

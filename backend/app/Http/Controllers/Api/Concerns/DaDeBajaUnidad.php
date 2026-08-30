@@ -46,6 +46,7 @@ trait DaDeBajaUnidad
         $unidad->notas = trim(($unidad->notas ? $unidad->notas . "\n" : '') . $nota);
         $unidad->cliente_id = null;
         $unidad->fecha_inicio_alquiler = null;
+        $unidad->fecha_vencimiento = null;
         $unidad->save();
 
         return response()->json($unidad->load('cliente'));

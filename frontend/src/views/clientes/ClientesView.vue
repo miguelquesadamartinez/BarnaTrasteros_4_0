@@ -214,6 +214,27 @@
           />
         </div>
 
+        <div class="form-group" v-if="editing && unidadesVencimiento.length">
+          <label class="form-label">Fecha de vencimiento del alquiler</label>
+          <div v-for="row in unidadesVencimiento" :key="row.key" class="form-row" style="align-items:flex-end">
+            <div class="form-group" style="flex:0 0 90px;margin-bottom:.5rem">
+              <small class="text-muted">{{ row.numero }}</small>
+            </div>
+            <div class="form-group" style="flex:0 0 160px;margin-bottom:.5rem">
+              <input v-model="fechaVencimientoEdits[row.key]" class="form-control" type="date" />
+            </div>
+            <div class="form-group" style="flex:0 0 auto;margin-bottom:.5rem">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :disabled="guardandoVencimiento === row.key"
+                @click="guardarVencimiento(row)"
+              >{{ guardandoVencimiento === row.key ? 'Guardando...' : 'Guardar' }}</button>
+            </div>
+          </div>
+          <small class="text-muted">A partir de esta fecha el pago se considera atrasado si no se ha cobrado.</small>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Fianzas</label>
           <div v-if="fianzasMostradas.length" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">
@@ -356,6 +377,8 @@ const currentFoto = ref(null)
 const currentContrato = ref(null)
 const generandoContrato = ref(false)
 const pendienteClienteEdit = ref(0)
+const fechaVencimientoEdits = ref({})
+const guardandoVencimiento = ref(null)
 const avisandoImpago = ref(false)
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
@@ -383,6 +406,14 @@ function todayStr() {
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
 }
+
+function sumarUnMes(fechaStr) {
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const fecha = new Date(y, m, d) // m sin -1 ya suma un mes (mismo día, mes siguiente)
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+}
+
+function formatDate(v) { return v ? v.split('T')[0] : '' }
 
 const emptyForm = () => ({
   nombre: '', apellido: '', dni: '', telefono: '',
@@ -520,6 +551,40 @@ const pisoOptions = computed(() =>
     .map((p) => ({ value: p.id, label: `${p.numero} — ${p.piso}` }))
 )
 
+const unidadesVencimiento = computed(() => {
+  const rows = []
+  for (const tid of form.value.trastero_ids) {
+    const t = trasterosStore.trasteros.find((tt) => tt.id === tid)
+    if (t) rows.push({ key: `trastero-${t.id}`, tipo: 'trastero', id: t.id, numero: t.numero })
+  }
+  if (form.value.piso_id) {
+    const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
+    if (p) rows.push({ key: `piso-${p.id}`, tipo: 'piso', id: p.id, numero: p.numero })
+  }
+  return rows
+})
+
+async function guardarVencimiento(row) {
+  guardandoVencimiento.value = row.key
+  try {
+    const nuevaFecha = fechaVencimientoEdits.value[row.key] || null
+    if (row.tipo === 'trastero') {
+      const t = trasterosStore.trasteros.find((tt) => tt.id === row.id)
+      await api.put(`/trasteros/${row.id}`, { ...t, fecha_vencimiento: nuevaFecha })
+      await trasterosStore.fetchTrasteros()
+    } else {
+      const p = pisosStore.pisos.find((pp) => pp.id === row.id)
+      await api.put(`/pisos/${row.id}`, { ...p, fecha_vencimiento: nuevaFecha })
+      await pisosStore.fetchPisos()
+    }
+    toast.success(`Fecha de vencimiento de ${row.numero} actualizada`)
+  } catch (e) {
+    toast.error(e.displayMessage || 'No se pudo actualizar la fecha de vencimiento')
+  } finally {
+    guardandoVencimiento.value = null
+  }
+}
+
 // Debounce de búsqueda: al cambiar el texto, volver a página 1
 let searchTimer = null
 watch(search, (val) => {
@@ -562,6 +627,7 @@ function openNew() {
   fianzasCliente.value = []
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
+  fechaVencimientoEdits.value = {}
   formError.value = ''
   showModal.value = true
 }
@@ -591,6 +657,16 @@ function openEdit(c) {
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   formError.value = ''
+
+  const vencInit = {}
+  for (const t of c.trasteros ?? []) {
+    vencInit[`trastero-${t.id}`] = formatDate(t.fecha_vencimiento) || ''
+  }
+  if (piso) {
+    vencInit[`piso-${piso.id}`] = formatDate(piso.fecha_vencimiento) || ''
+  }
+  fechaVencimientoEdits.value = vencInit
+
   showModal.value = true
   loadFianzasCliente(c.id)
   pendienteClienteEdit.value = 0
@@ -718,29 +794,27 @@ async function save() {
     for (const id of oldTrasteroIds) {
       if (!newTrasteroIds.includes(id)) {
         const t = trasterosStore.trasteros.find((tt) => tt.id === id)
-        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: null, fecha_inicio_alquiler: null })
+        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: null, fecha_inicio_alquiler: null, fecha_vencimiento: null })
       }
     }
     // Asignar nuevos trasteros
     for (const id of newTrasteroIds) {
       if (!oldTrasteroIds.includes(id)) {
         const t = trasterosStore.trasteros.find((tt) => tt.id === id)
-        const hoy = new Date()
-        const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
+        const fechaHoy = todayStr()
+        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy) })
       }
     }
     // Desasignar piso anterior si cambió
     const prevPiso = pisosStore.pisos.find((p) => p.cliente_id === cliente.id)
     if (prevPiso && prevPiso.id !== form.value.piso_id) {
-      await api.put(`/pisos/${prevPiso.id}`, { ...prevPiso, cliente_id: null, fecha_inicio_alquiler: null })
+      await api.put(`/pisos/${prevPiso.id}`, { ...prevPiso, cliente_id: null, fecha_inicio_alquiler: null, fecha_vencimiento: null })
     }
     // Asignar nuevo piso
     if (form.value.piso_id) {
       const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
-      const hoy = new Date()
-      const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-      if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy })
+      const fechaHoy = todayStr()
+      if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy) })
     }
     // Refrescar trasteros y pisos
     await trasterosStore.fetchTrasteros()

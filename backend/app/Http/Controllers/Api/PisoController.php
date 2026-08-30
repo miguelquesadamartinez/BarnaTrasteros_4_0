@@ -40,6 +40,7 @@ class PisoController extends Controller
             'precio_mensual'       => 'required|numeric|min:0',
             'cliente_id'           => 'nullable|exists:clientes,id',
             'fecha_inicio_alquiler'=> 'nullable|date',
+            'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
         ]);
 
@@ -67,6 +68,7 @@ class PisoController extends Controller
             'precio_mensual'       => 'required|numeric|min:0',
             'cliente_id'           => 'nullable|exists:clientes,id',
             'fecha_inicio_alquiler'=> 'nullable|date',
+            'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
         ]);
 

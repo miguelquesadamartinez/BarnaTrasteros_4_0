@@ -88,9 +88,16 @@
           />
           <small class="text-muted" v-if="editing && originalHasCliente">Usa "Dar de baja" en el listado para liberar esta unidad.</small>
         </div>
-        <div class="form-group" v-if="form.cliente_id">
-          <label class="form-label">Fecha inicio alquiler</label>
-          <input v-model="form.fecha_inicio_alquiler" class="form-control" type="date" />
+        <div class="form-row" v-if="form.cliente_id">
+          <div class="form-group">
+            <label class="form-label">Fecha inicio alquiler</label>
+            <input v-model="form.fecha_inicio_alquiler" class="form-control" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha de vencimiento</label>
+            <input v-model="form.fecha_vencimiento" class="form-control" type="date" />
+            <small class="text-muted">A partir de esta fecha el pago se considera atrasado. Por defecto, un mes después del inicio.</small>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Notas</label>
@@ -144,7 +151,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePisosStore } from '@/stores/pisos'
 import { useClientesStore } from '@/stores/clientes'
@@ -174,9 +181,25 @@ function formatDate(v) { return v ? v.split('T')[0] : '' }
 
 const emptyForm = () => ({
   numero: '', piso: '', precio_mensual: 0,
-  cliente_id: null, fecha_inicio_alquiler: '', notas: '',
+  cliente_id: null, fecha_inicio_alquiler: '', fecha_vencimiento: '', notas: '',
 })
 const form = ref(emptyForm())
+
+// Al fijar (o cambiar) la fecha de inicio, se sugiere un mes después como
+// vencimiento por defecto — solo si el usuario no lo ha tocado ya a mano.
+watch(() => form.value.fecha_inicio_alquiler, (nueva, vieja) => {
+  if (!nueva) return
+  const sugeridaVieja = vieja ? sumarUnMes(vieja) : null
+  if (!form.value.fecha_vencimiento || form.value.fecha_vencimiento === sugeridaVieja) {
+    form.value.fecha_vencimiento = sumarUnMes(nueva)
+  }
+})
+
+function sumarUnMes(fechaStr) {
+  const [y, m, d] = fechaStr.split('-').map(Number)
+  const fecha = new Date(y, m, d) // m sin -1 ya suma un mes (mismo día, mes siguiente)
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+}
 
 const clienteOptions = computed(() =>
   clientesStore.clientes.map((c) => ({
@@ -210,6 +233,7 @@ function openEdit(p) {
     numero: p.numero, piso: p.piso, precio_mensual: p.precio_mensual,
     cliente_id: p.cliente_id ?? null,
     fecha_inicio_alquiler: formatDate(p.fecha_inicio_alquiler) ?? '',
+    fecha_vencimiento: formatDate(p.fecha_vencimiento) ?? '',
     notas: p.notas ?? '', _id: p.id,
   }
   formError.value = ''

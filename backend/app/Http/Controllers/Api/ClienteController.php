@@ -116,6 +116,7 @@ class ClienteController extends Controller
             $modelo->notas = trim(($modelo->notas ? $modelo->notas . "\n" : '') . $nota);
             $modelo->cliente_id = null;
             $modelo->fecha_inicio_alquiler = null;
+            $modelo->fecha_vencimiento = null;
             $modelo->save();
             $unidadesLiberadas[] = $modelo->numero;
         }
