@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use App\Models\Fianza;
+use App\Models\PagoAlquiler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -70,24 +72,63 @@ class ClienteController extends Controller
         return response()->json($clientes);
     }
 
-    public function archivar(Cliente $cliente): JsonResponse
+    public function archivar(Request $request, Cliente $cliente): JsonResponse
     {
         if ($cliente->archivado_at !== null) {
             return response()->json(['message' => 'Este cliente ya está archivado.'], 422);
         }
 
-        if ($cliente->trasteros()->count() > 0 || $cliente->pisos()->count() > 0) {
-            return response()->json([
-                'message' => 'No se puede archivar: el cliente tiene un trastero o piso asignado. Da de baja las unidades primero.',
-            ], 422);
+        $unidades = collect()
+            ->concat($cliente->trasteros->map(fn ($t) => ['tipo' => 'trastero', 'modelo' => $t]))
+            ->concat($cliente->pisos->map(fn ($p) => ['tipo' => 'piso', 'modelo' => $p]));
+
+        if ($unidades->isNotEmpty() && !$request->boolean('force')) {
+            $pagosPendientes = collect();
+            $fianzasPendientes = collect();
+
+            foreach ($unidades as $u) {
+                $pagosPendientes = $pagosPendientes->concat(
+                    PagoAlquiler::where('tipo', $u['tipo'])->where('referencia_id', $u['modelo']->id)
+                        ->whereIn('estado', ['pendiente', 'parcial'])
+                        ->get(['id', 'numero', 'mes', 'anyo', 'importe_total', 'pagado', 'estado'])
+                );
+                $fianzasPendientes = $fianzasPendientes->concat(
+                    Fianza::where('tipo', $u['tipo'])->where('referencia_id', $u['modelo']->id)
+                        ->where('devuelta', false)
+                        ->get(['id', 'numero', 'importe', 'fecha_entrega'])
+                );
+            }
+
+            if ($pagosPendientes->isNotEmpty() || $fianzasPendientes->isNotEmpty()) {
+                return response()->json([
+                    'requiere_confirmacion' => true,
+                    'unidades' => $unidades->pluck('modelo.numero')->values(),
+                    'pagos_pendientes' => $pagosPendientes->values(),
+                    'fianzas_pendientes' => $fianzasPendientes->values(),
+                ], 409);
+            }
+        }
+
+        $unidadesLiberadas = [];
+        foreach ($unidades as $u) {
+            $modelo = $u['modelo'];
+            $nota = 'Baja automática al archivar a ' . $cliente->nombre_completo . ' el ' . now()->format('d/m/Y') . '.';
+            $modelo->notas = trim(($modelo->notas ? $modelo->notas . "\n" : '') . $nota);
+            $modelo->cliente_id = null;
+            $modelo->fecha_inicio_alquiler = null;
+            $modelo->save();
+            $unidadesLiberadas[] = $modelo->numero;
         }
 
         $cliente->archivado_at = now();
         $cliente->save();
 
-        Cache::tags(['clientes'])->flush();
+        Cache::tags(['clientes', 'trasteros', 'pisos', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
-        return response()->json($cliente);
+        return response()->json([
+            'cliente' => $cliente->fresh(),
+            'unidades_liberadas' => $unidadesLiberadas,
+        ]);
     }
 
     public function desarchivar(Cliente $cliente): JsonResponse

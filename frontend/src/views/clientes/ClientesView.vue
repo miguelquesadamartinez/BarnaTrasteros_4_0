@@ -284,11 +284,34 @@
 
     <!-- Modal Confirm Archive -->
     <AppModal v-model="showArchive" title="Archivar cliente" size="sm">
-      <p>¿Archivar a <strong>{{ toArchive?.nombre }} {{ toArchive?.apellido }}</strong>?</p>
-      <p class="text-muted" style="font-size:.85rem">Desaparecerá del listado de clientes pero se conservará junto con su historial. Podrás consultarlo y desarchivarlo desde Mantenimiento → Clientes Archivados.</p>
+      <div class="alert alert-danger" v-if="archiveError">{{ archiveError }}</div>
+      <div v-if="!archiveInfo">
+        <p>¿Archivar a <strong>{{ toArchive?.nombre }} {{ toArchive?.apellido }}</strong>?</p>
+        <p class="text-muted" style="font-size:.85rem">Desaparecerá del listado de clientes pero se conservará junto con su historial. Podrás consultarlo y desarchivarlo desde Mantenimiento → Clientes Archivados.</p>
+      </div>
+      <div v-else>
+        <p>
+          <strong>{{ toArchive?.nombre }} {{ toArchive?.apellido }}</strong> tiene
+          <strong>{{ archiveInfo.unidades?.join(', ') }}</strong> asignado. Al archivar se dará de baja
+          automáticamente, pero antes revisa lo pendiente:
+        </p>
+        <ul v-if="archiveInfo.pagos_pendientes?.length">
+          <li v-for="pago in archiveInfo.pagos_pendientes" :key="'p'+pago.id">
+            {{ pago.numero }} — pago {{ pago.mes }}/{{ pago.anyo }}: pendiente {{ formatMoney(pago.importe_total - pago.pagado) }} ({{ pago.estado }})
+          </li>
+        </ul>
+        <ul v-if="archiveInfo.fianzas_pendientes?.length">
+          <li v-for="f in archiveInfo.fianzas_pendientes" :key="'f'+f.id">
+            {{ f.numero }} — fianza sin devolver: {{ formatMoney(f.importe) }}
+          </li>
+        </ul>
+        <p class="text-muted" style="font-size:.85rem">Puedes archivar igualmente; estos importes seguirán pendientes en el sistema.</p>
+      </div>
       <div class="form-actions">
         <button class="btn btn-secondary" @click="showArchive = false">Cancelar</button>
-        <button class="btn btn-primary" @click="doArchive" :disabled="saving">Archivar</button>
+        <button class="btn btn-primary" @click="doArchive" :disabled="saving">
+          {{ archiveInfo ? 'Archivar de todas formas' : 'Archivar' }}
+        </button>
       </div>
     </AppModal>
   </div>
@@ -326,6 +349,8 @@ const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
 const toArchive = ref(null)
+const archiveInfo = ref(null)
+const archiveError = ref('')
 const deleteError = ref('')
 const currentFoto = ref(null)
 const currentContrato = ref(null)
@@ -586,18 +611,30 @@ function confirmDelete(c) {
 
 function confirmArchive(c) {
   toArchive.value = c
+  archiveInfo.value = null
+  archiveError.value = ''
   showArchive.value = true
 }
 
 async function doArchive() {
   saving.value = true
+  archiveError.value = ''
   try {
-    await store.archivarCliente(toArchive.value.id)
-    showArchive.value = false
-    toast.success('Cliente archivado')
-    await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
+    const result = await store.archivarCliente(toArchive.value.id, !!archiveInfo.value)
+    if (result.ok) {
+      showArchive.value = false
+      const liberadas = result.data?.unidades_liberadas || []
+      toast.success(
+        liberadas.length
+          ? `Cliente archivado. Se liberó: ${liberadas.join(', ')}.`
+          : 'Cliente archivado'
+      )
+      await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
+    } else {
+      archiveInfo.value = result.pendientes
+    }
   } catch (e) {
-    toast.error(e.displayMessage || 'No se pudo archivar el cliente')
+    archiveError.value = e.displayMessage || 'No se pudo archivar el cliente'
   } finally {
     saving.value = false
   }

@@ -92,10 +92,17 @@ export const useClientesStore = defineStore('clientes', () => {
     }
   }
 
-  async function archivarCliente(id) {
-    const { data } = await api.post(`/clientes/${id}/archivar`)
-    clientes.value = clientes.value.filter((c) => c.id !== id)
-    return data
+  async function archivarCliente(id, force = false) {
+    try {
+      const { data } = await api.post(`/clientes/${id}/archivar`, { force })
+      clientes.value = clientes.value.filter((c) => c.id !== id)
+      return { ok: true, data }
+    } catch (e) {
+      if (e.response?.status === 409) {
+        return { ok: false, pendientes: e.response.data }
+      }
+      throw e
+    }
   }
 
   async function desarchivarCliente(id) {
