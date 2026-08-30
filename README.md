@@ -2,6 +2,8 @@
 
 Sistema de gestión para el negocio de alquiler de **trasteros** y **pisos** de Barna Trasteros. Uso interno, sin autenticación.
 
+📖 **[Manual de usuario](docs/MANUAL_USUARIO.md)** — guía visual de todas las pantallas y funciones.
+
 Backend **Laravel 12** · Frontend **Vue 3 + Vite + Pinia** · **MySQL 8** · **Docker Compose**.
 
 ---
