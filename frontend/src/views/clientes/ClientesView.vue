@@ -756,8 +756,11 @@ async function save() {
   const prevPisoPre = editing.value ? pisosStore.pisos.find((p) => p.cliente_id === form.value._id) : null
   const pisoChanged = (prevPisoPre?.id ?? null) !== (form.value.piso_id ?? null)
   const unitsChanged = trasterosChanged || pisoChanged
-  const isEditingWithContract = editing.value && !!currentContrato.value
-  const shouldGenerateContract = !editing.value || (isEditingWithContract && unitsChanged)
+  // Se genera (o regenera) el contrato tanto al crear como al editar si las
+  // unidades cambiaron — antes solo regeneraba en edición si ya existía un
+  // contrato previo, dejando sin contrato a un cliente al que se le asigna
+  // su primera unidad después de haberlo creado sin ninguna.
+  const shouldGenerateContract = !editing.value || unitsChanged
 
   // Se abre ya (en blanco) para conservar el gesto de usuario; se rellena luego con el PDF.
   const contractTab = shouldGenerateContract ? window.open('', '_blank') : null
