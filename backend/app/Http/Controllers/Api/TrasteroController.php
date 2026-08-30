@@ -38,7 +38,7 @@ class TrasteroController extends Controller
         $validated = $request->validate([
             'numero'               => 'required|string|max:20|unique:trasteros,numero',
             'piso'                 => 'required|string|max:20',
-            'tamanyo'              => 'required|string|max:50',
+            'tamanyo'              => 'required|string|max:50|exists:tamanyo_trasteros,nombre',
             'precio_mensual'       => 'required|numeric|min:0',
             'cliente_id'           => 'nullable|exists:clientes,id',
             'fecha_inicio_alquiler'=> 'nullable|date',
@@ -67,7 +67,7 @@ class TrasteroController extends Controller
         $validated = $request->validate([
             'numero'               => "required|string|max:20|unique:trasteros,numero,{$trastero->id}",
             'piso'                 => 'required|string|max:20',
-            'tamanyo'              => 'required|string|max:50',
+            'tamanyo'              => 'required|string|max:50|exists:tamanyo_trasteros,nombre',
             'precio_mensual'       => 'required|numeric|min:0',
             'cliente_id'           => 'nullable|exists:clientes,id',
             'fecha_inicio_alquiler'=> 'nullable|date',
