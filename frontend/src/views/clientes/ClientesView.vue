@@ -64,7 +64,13 @@
               <td>
                 <div class="actions-cell">
                   <button class="btn btn-warning btn-sm" title="Editar cliente" @click="openEdit(c)">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" title="Eliminar cliente" @click="confirmDelete(c)">🗑️ Eliminar</button>
+                  <button class="btn btn-secondary btn-sm" title="Archivar cliente" @click="confirmArchive(c)">📦 Archivar</button>
+                  <button
+                    class="btn btn-danger btn-sm"
+                    :title="noEliminable(c) ? 'No se puede eliminar: tiene pagos o fianzas registradas. Usa Archivar.' : 'Eliminar cliente'"
+                    :disabled="noEliminable(c)"
+                    @click="confirmDelete(c)"
+                  >🗑️ Eliminar</button>
                 </div>
               </td>
             </tr>
@@ -269,9 +275,20 @@
     <!-- Modal Confirm Delete -->
     <AppModal v-model="showDelete" title="Confirmar eliminación" size="sm">
       <p>¿Seguro que deseas eliminar al cliente <strong>{{ toDelete?.nombre }} {{ toDelete?.apellido }}</strong>?</p>
+      <div class="alert alert-danger" v-if="deleteError">{{ deleteError }}</div>
       <div class="form-actions">
         <button class="btn btn-secondary" @click="showDelete = false">Cancelar</button>
-        <button class="btn btn-danger" @click="doDelete" :disabled="saving">Eliminar</button>
+        <button class="btn btn-danger" @click="doDelete" :disabled="saving || !!deleteError">Eliminar</button>
+      </div>
+    </AppModal>
+
+    <!-- Modal Confirm Archive -->
+    <AppModal v-model="showArchive" title="Archivar cliente" size="sm">
+      <p>¿Archivar a <strong>{{ toArchive?.nombre }} {{ toArchive?.apellido }}</strong>?</p>
+      <p class="text-muted" style="font-size:.85rem">Desaparecerá del listado de clientes pero se conservará junto con su historial. Podrás consultarlo y desarchivarlo desde Mantenimiento → Clientes Archivados.</p>
+      <div class="form-actions">
+        <button class="btn btn-secondary" @click="showArchive = false">Cancelar</button>
+        <button class="btn btn-primary" @click="doArchive" :disabled="saving">Archivar</button>
       </div>
     </AppModal>
   </div>
@@ -303,10 +320,13 @@ const currentPage = ref(1)
 const perPage = ref(DEFAULT_PER_PAGE)
 const showModal = ref(false)
 const showDelete = ref(false)
+const showArchive = ref(false)
 const editing = ref(false)
 const saving = ref(false)
 const formError = ref('')
 const toDelete = ref(null)
+const toArchive = ref(null)
+const deleteError = ref('')
 const currentFoto = ref(null)
 const currentContrato = ref(null)
 const generandoContrato = ref(false)
@@ -554,9 +574,33 @@ function openEdit(c) {
     .catch(() => {})
 }
 
+function noEliminable(c) {
+  return !!(c.tiene_pagos || c.tiene_fianzas)
+}
+
 function confirmDelete(c) {
   toDelete.value = c
+  deleteError.value = ''
   showDelete.value = true
+}
+
+function confirmArchive(c) {
+  toArchive.value = c
+  showArchive.value = true
+}
+
+async function doArchive() {
+  saving.value = true
+  try {
+    await store.archivarCliente(toArchive.value.id)
+    showArchive.value = false
+    toast.success('Cliente archivado')
+    await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
+  } catch (e) {
+    toast.error(e.displayMessage || 'No se pudo archivar el cliente')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function generarContratoManual() {
@@ -703,12 +747,13 @@ async function save() {
 
 async function doDelete() {
   saving.value = true
+  deleteError.value = ''
   try {
     await store.deleteCliente(toDelete.value.id)
     showDelete.value = false
     await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
   } catch (e) {
-    alert(e.displayMessage || 'Error al eliminar')
+    deleteError.value = e.displayMessage || 'Error al eliminar'
   } finally {
     saving.value = false
   }

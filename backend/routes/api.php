@@ -26,9 +26,12 @@ Route::get('logo', function () {
 Route::get('busqueda', [BusquedaController::class, 'buscar']);
 
 Route::get('clientes/list-all', [ClienteController::class, 'listAll']);
+Route::get('clientes/archivados', [ClienteController::class, 'archivados']);
 Route::get('clientes/{id}/pendiente-total', [ClienteController::class, 'pendienteTotal']);
 Route::post('clientes/{cliente}/contrato', [ClienteController::class, 'generarContrato']);
 Route::post('clientes/{cliente}/avisar-impago', [ClienteController::class, 'avisarImpago']);
+Route::post('clientes/{cliente}/archivar', [ClienteController::class, 'archivar']);
+Route::post('clientes/{cliente}/desarchivar', [ClienteController::class, 'desarchivar']);
 Route::apiResource('clientes', ClienteController::class);
 
 // Fianzas

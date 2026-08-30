@@ -17,7 +17,9 @@ class ClienteController extends Controller
         $cacheKey = 'clientes:list:' . md5(serialize($request->only(['search', 'per_page', 'page'])));
 
         $clientes = Cache::tags(['clientes'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
-            $query = Cliente::with(['trasteros', 'pisos']);
+            $query = Cliente::with(['trasteros', 'pisos'])
+                ->withExists(['pagosAlquiler as tiene_pagos', 'fianzas as tiene_fianzas'])
+                ->whereNull('archivado_at');
 
             if ($request->has('search') && $request->search) {
                 $search = $request->search;
@@ -39,10 +41,67 @@ class ClienteController extends Controller
     public function listAll(Request $request): JsonResponse
     {
         $clientes = Cache::tags(['clientes'])->remember('clientes:all', now()->addHours(24), function () {
-            return Cliente::with(['trasteros', 'pisos'])->orderBy('apellido')->orderBy('nombre')->get();
+            return Cliente::with(['trasteros', 'pisos'])->whereNull('archivado_at')->orderBy('apellido')->orderBy('nombre')->get();
         });
 
         return response()->json($clientes);
+    }
+
+    public function archivados(Request $request): JsonResponse
+    {
+        $cacheKey = 'clientes:archivados:' . md5(serialize($request->only(['search', 'per_page', 'page'])));
+
+        $clientes = Cache::tags(['clientes'])->remember($cacheKey, now()->addHours(24), function () use ($request) {
+            $query = Cliente::with(['trasteros', 'pisos'])->whereNotNull('archivado_at');
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('nombre', 'like', "%{$search}%")
+                      ->orWhere('apellido', 'like', "%{$search}%")
+                      ->orWhere('dni', 'like', "%{$search}%");
+                });
+            }
+
+            $perPage = $request->integer('per_page', 15);
+            return $query->orderByDesc('archivado_at')->paginate($perPage);
+        });
+
+        return response()->json($clientes);
+    }
+
+    public function archivar(Cliente $cliente): JsonResponse
+    {
+        if ($cliente->archivado_at !== null) {
+            return response()->json(['message' => 'Este cliente ya está archivado.'], 422);
+        }
+
+        if ($cliente->trasteros()->count() > 0 || $cliente->pisos()->count() > 0) {
+            return response()->json([
+                'message' => 'No se puede archivar: el cliente tiene un trastero o piso asignado. Da de baja las unidades primero.',
+            ], 422);
+        }
+
+        $cliente->archivado_at = now();
+        $cliente->save();
+
+        Cache::tags(['clientes'])->flush();
+
+        return response()->json($cliente);
+    }
+
+    public function desarchivar(Cliente $cliente): JsonResponse
+    {
+        if ($cliente->archivado_at === null) {
+            return response()->json(['message' => 'Este cliente no está archivado.'], 422);
+        }
+
+        $cliente->archivado_at = null;
+        $cliente->save();
+
+        Cache::tags(['clientes'])->flush();
+
+        return response()->json($cliente);
     }
 
     public function store(Request $request): JsonResponse
@@ -118,6 +177,12 @@ class ClienteController extends Controller
 
     public function destroy(Cliente $cliente): JsonResponse
     {
+        if ($cliente->pagosAlquiler()->exists() || $cliente->fianzas()->exists()) {
+            return response()->json([
+                'message' => 'No se puede eliminar: el cliente tiene pagos o fianzas registradas. Usa "Archivar" en su lugar para conservar el historial.',
+            ], 422);
+        }
+
         if ($cliente->foto_dni) {
             Storage::disk('public')->delete($cliente->foto_dni);
         }

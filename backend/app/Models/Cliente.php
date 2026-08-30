@@ -25,6 +25,7 @@ class Cliente extends Model
 
     protected $casts = [
         'necesita_factura' => 'boolean',
+        'archivado_at' => 'datetime',
     ];
 
     public function trasteros(): HasMany

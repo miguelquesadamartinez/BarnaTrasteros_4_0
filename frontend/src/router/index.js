@@ -18,6 +18,7 @@ import BackupView from '@/views/mantenimiento/BackupView.vue'
 import RevisionPrecioView from '@/views/mantenimiento/RevisionPrecioView.vue'
 import RevisionPrecioIndividualView from '@/views/mantenimiento/RevisionPrecioIndividualView.vue'
 import HistorialPreciosView from '@/views/mantenimiento/HistorialPreciosView.vue'
+import ClientesArchivadosView from '@/views/mantenimiento/ClientesArchivadosView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { title: 'Inicio' } },
@@ -39,6 +40,7 @@ const routes = [
   { path: '/mantenimiento/revision-precio', name: 'revision-precio', component: RevisionPrecioView, meta: { title: 'Revisión de Precio' } },
   { path: '/mantenimiento/revision-precio/individual', name: 'revision-precio-individual', component: RevisionPrecioIndividualView, meta: { title: 'Cambio de Precio Individual' } },
   { path: '/mantenimiento/historial-precios', name: 'historial-precios', component: HistorialPreciosView, meta: { title: 'Historial de Precios' } },
+  { path: '/mantenimiento/clientes-archivados', name: 'clientes-archivados', component: ClientesArchivadosView, meta: { title: 'Clientes Archivados' } },
 ]
 
 const router = createRouter({
