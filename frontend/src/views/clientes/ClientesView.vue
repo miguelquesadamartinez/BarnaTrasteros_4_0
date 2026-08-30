@@ -788,6 +788,7 @@ async function doDelete() {
   try {
     await store.deleteCliente(toDelete.value.id)
     showDelete.value = false
+    toast.success('Cliente eliminado')
     await store.fetchClientes({ search: search.value, page: currentPage.value, per_page: perPage.value })
   } catch (e) {
     deleteError.value = e.displayMessage || 'Error al eliminar'
