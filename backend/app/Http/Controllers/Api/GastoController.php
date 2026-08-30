@@ -66,7 +66,7 @@ class GastoController extends Controller
             'fecha_vencimiento' => 'nullable|date',
             'importe_total'     => 'required|numeric|min:0',
             'notas'             => 'nullable|string',
-            'imagenes.*'        => 'nullable|image|mimes:jpg,jpeg,png,pdf|max:10240',
+            'imagenes.*'        => 'nullable|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
         $validated['pagado'] = 0;
@@ -214,7 +214,7 @@ class GastoController extends Controller
     {
         $request->validate([
             'imagenes'   => 'required|array',
-            'imagenes.*' => 'image|mimes:jpg,jpeg,png,pdf|max:10240',
+            'imagenes.*' => 'mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
         $nuevas = [];
