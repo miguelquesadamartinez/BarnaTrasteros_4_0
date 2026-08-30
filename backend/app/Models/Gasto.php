@@ -26,8 +26,8 @@ class Gasto extends Model
     protected $casts = [
         'importe_total' => 'decimal:2',
         'pagado' => 'decimal:2',
-        'fecha_emision' => 'date',
-        'fecha_vencimiento' => 'date',
+        'fecha_emision' => 'date:Y-m-d',
+        'fecha_vencimiento' => 'date:Y-m-d',
     ];
 
     public function detalles(): HasMany

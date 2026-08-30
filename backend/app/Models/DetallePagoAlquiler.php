@@ -18,7 +18,7 @@ class DetallePagoAlquiler extends Model
 
     protected $casts = [
         'importe' => 'decimal:2',
-        'fecha_pago' => 'date',
+        'fecha_pago' => 'date:Y-m-d',
     ];
 
     public function pagoAlquiler(): BelongsTo
