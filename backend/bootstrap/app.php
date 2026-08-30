@@ -18,11 +18,45 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'error'   => 'Error interno del servidor',
-                    'message' => $e->getMessage(),
-                ], 500);
+            if (! $request->is('api/*')) {
+                return null;
             }
+
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                $errors = $e->errors();
+
+                return response()->json([
+                    'message' => collect($errors)->flatten()->first() ?? 'Los datos enviados no son válidos.',
+                    'errors' => $errors,
+                ], 422);
+            }
+
+            // Laravel convierte ModelNotFoundException (route-model-binding o
+            // findOrFail) en NotFoundHttpException antes de llegar aquí.
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                return response()->json([
+                    'message' => 'El recurso solicitado no existe.',
+                ], 404);
+            }
+
+            if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                return response()->json([
+                    'message' => 'No tienes permiso para realizar esta acción.',
+                ], 403);
+            }
+
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'Error en la petición.',
+                ], $e->getStatusCode());
+            }
+
+            // Cualquier otro error (BD, PHP, etc.): se registra en el log
+            // pero no se expone el mensaje interno al cliente.
+            report($e);
+
+            return response()->json([
+                'message' => 'Error interno del servidor. Inténtalo de nuevo.',
+            ], 500);
         });
     })->create();
