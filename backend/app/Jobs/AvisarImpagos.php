@@ -5,8 +5,6 @@ namespace App\Jobs;
 use App\Mail\ReporteImpagosMail;
 use App\Models\Cliente;
 use App\Models\PagoAlquiler;
-use App\Models\Piso;
-use App\Models\Trastero;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -20,11 +18,6 @@ class AvisarImpagos implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    // Cada unidad tiene su propio día de vencimiento (fecha_vencimiento); si no
-    // lo tiene fijado (unidades antiguas sin asignar), se usa el día 5 por defecto.
-    private const DIA_VENCIMIENTO_POR_DEFECTO = 5;
-    private const DIAS_MARGEN = 5;
-
     public function handle(): void
     {
         // Clientes con al menos un pago que ya cumple el margen desde su fecha de
@@ -32,11 +25,7 @@ class AvisarImpagos implements ShouldQueue
         $clienteIds = PagoAlquiler::whereIn('estado', ['pendiente', 'parcial'])
             ->whereNull('aviso_impago_enviado_at')
             ->get()
-            ->filter(function (PagoAlquiler $pago) {
-                $dia = $this->diaVencimiento($pago);
-                $fechaAviso = Carbon::create($pago->anyo, $pago->mes, $dia)->addDays(self::DIAS_MARGEN);
-                return Carbon::now()->gte($fechaAviso);
-            })
+            ->filter(fn (PagoAlquiler $pago) => $pago->elegibleParaAvisoImpago())
             ->pluck('cliente_id')
             ->unique();
 
@@ -83,14 +72,5 @@ class AvisarImpagos implements ShouldQueue
                 $totalPendiente
             ));
         }
-    }
-
-    private function diaVencimiento(PagoAlquiler $pago): int
-    {
-        $unidad = $pago->tipo === 'trastero'
-            ? Trastero::find($pago->referencia_id)
-            : Piso::find($pago->referencia_id);
-
-        return $unidad?->fecha_vencimiento?->day ?? self::DIA_VENCIMIENTO_POR_DEFECTO;
     }
 }

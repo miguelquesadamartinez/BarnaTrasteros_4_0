@@ -105,19 +105,14 @@ class GenerarPagosMensuales implements ShouldQueue
 
         if ($generados > 0) {
             $destinatario = (string) config('mail.reportes.pagos_to', 'miguel.quesada.martinez.1975@gmail.com');
+            $cc = config('mail.reportes.pagos_cc');
 
-            if (env('APP_ENV') === 'production') {
-                Mail::to($destinatario)
-                    ->cc('nieves.martinez.lloret@hotmail.es')
-                    ->queue(
-                    new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
-                );
-            } else {
-                Mail::to($destinatario)
-                    ->queue(
-                    new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte)
-                );
+            $mail = Mail::to($destinatario);
+            if (config('app.env') === 'production' && !empty($cc)) {
+                $mail->cc($cc);
             }
+            $mail->queue(new ReportePagosGeneradosMail($this->mes, $this->anyo, $pagosGenerados, $totalImporte));
+
             Log::info(
                 "GenerarPagosMensuales: Reporte encolado para {$destinatario} con {$pagosGenerados->count()} pagos (total {$totalImporte})"
             );

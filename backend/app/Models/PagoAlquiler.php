@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PagoAlquiler extends Model
 {
+    // Cada unidad tiene su propio día de vencimiento (fecha_vencimiento); si no
+    // lo tiene fijado (unidades antiguas sin asignar), se usa el día 5 por defecto.
+    private const DIA_VENCIMIENTO_POR_DEFECTO = 5;
+    private const DIAS_MARGEN_AVISO = 5;
+
     protected $table = 'pagos_alquiler';
 
     protected $fillable = [
@@ -55,5 +61,21 @@ class PagoAlquiler extends Model
             $this->estado = 'parcial';
         }
         $this->save();
+    }
+
+    /**
+     * Si ya ha pasado el margen de gracia (días) desde la fecha de vencimiento
+     * de la unidad, y por tanto es correcto avisar al cliente de este impago.
+     */
+    public function elegibleParaAvisoImpago(): bool
+    {
+        $unidad = $this->tipo === 'trastero'
+            ? Trastero::find($this->referencia_id)
+            : Piso::find($this->referencia_id);
+
+        $dia = $unidad?->fecha_vencimiento?->day ?? self::DIA_VENCIMIENTO_POR_DEFECTO;
+        $fechaAviso = Carbon::create($this->anyo, $this->mes, $dia)->addDays(self::DIAS_MARGEN_AVISO);
+
+        return Carbon::now()->gte($fechaAviso);
     }
 }

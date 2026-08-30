@@ -38,6 +38,11 @@ class ReportarPagosPendientesSemanal implements ShouldQueue
             ];
         });
 
+        if ($pendientes->isEmpty()) {
+            Log::info('ReportarPagosPendientesSemanal: sin pagos pendientes, no se envía email.');
+            return;
+        }
+
         $totalPendiente = $pendientes->sum('pendiente');
 
         $destinatario = (string) config('mail.reportes.pagos_to');

@@ -117,6 +117,7 @@ return [
 
     'reportes' => [
         'pagos_to' => env('REPORT_PAGOS_EMAIL', 'miguel.quesada.martinez.1975@gmail.com'),
+        'pagos_cc' => env('REPORT_PAGOS_CC'),
     ],
 
 ];

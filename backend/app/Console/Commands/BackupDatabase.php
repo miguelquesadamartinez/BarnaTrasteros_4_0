@@ -25,7 +25,7 @@ class BackupDatabase extends Command
             File::makeDirectory($dir, 0775, true);
         }
 
-        $filename = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql.gz';
+        $filename = 'backup_' . now()->format('Y-m-d_H-i-s-u') . '.sql.gz';
         $filepath = $dir . '/' . $filename;
 
         // Intentar con mysqldump si está disponible

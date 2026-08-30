@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class RestoreDatabase extends Command
 {
-    protected $signature   = 'db:restore {filename? : Nombre del archivo de backup (ej: backup_2026-03-01_23-00-00.sql.gz)}';
+    protected $signature   = 'db:restore {filename? : Nombre del archivo de backup (ej: backup_2026-03-01_23-00-00-123456.sql.gz)}';
     protected $description = 'Restaura la base de datos desde un backup de la carpeta mysql_bk';
 
     public function handle(): int
@@ -74,10 +74,7 @@ class RestoreDatabase extends Command
             $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
 
             // Dividir en sentencias individuales y ejecutar
-            $statements = array_filter(
-                array_map('trim', preg_split('/;\s*$/m', $sql)),
-                fn($s) => $s !== ''
-            );
+            $statements = $this->splitSqlStatements($sql);
 
             foreach ($statements as $statement) {
                 $pdo->exec($statement);
@@ -102,5 +99,58 @@ class RestoreDatabase extends Command
             }
         }
         return null;
+    }
+
+    /**
+     * Divide un dump SQL en sentencias individuales, respetando el ';' cuando
+     * aparece dentro de una cadena entre comillas (p. ej. una nota de cliente
+     * que termine en ';' seguida de salto de línea). Un simple split por
+     * ";\s*$" con regex rompería en ese caso.
+     */
+    private function splitSqlStatements(string $sql): array
+    {
+        $statements = [];
+        $current    = '';
+        $inString   = false;
+        $quoteChar  = '';
+        $len        = strlen($sql);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $sql[$i];
+            $current .= $char;
+
+            if ($inString) {
+                if ($char === '\\' && $i + 1 < $len) {
+                    // Carácter escapado: consumir también el siguiente sin evaluarlo.
+                    $current .= $sql[++$i];
+                    continue;
+                }
+                if ($char === $quoteChar) {
+                    $inString = false;
+                }
+                continue;
+            }
+
+            if ($char === "'" || $char === '"' || $char === '`') {
+                $inString  = true;
+                $quoteChar = $char;
+                continue;
+            }
+
+            if ($char === ';') {
+                $trimmed = trim($current);
+                if ($trimmed !== '') {
+                    $statements[] = $trimmed;
+                }
+                $current = '';
+            }
+        }
+
+        $trimmed = trim($current);
+        if ($trimmed !== '') {
+            $statements[] = $trimmed;
+        }
+
+        return $statements;
     }
 }

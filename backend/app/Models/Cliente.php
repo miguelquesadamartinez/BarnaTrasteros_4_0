@@ -59,7 +59,9 @@ class Cliente extends Model
             return false;
         }
 
-        $pagos = $this->pagosAlquiler()->whereIn('estado', ['pendiente', 'parcial'])->get();
+        $pagos = $this->pagosAlquiler()->whereIn('estado', ['pendiente', 'parcial'])->get()
+            ->filter(fn (PagoAlquiler $pago) => $pago->elegibleParaAvisoImpago())
+            ->values();
         if ($pagos->isEmpty()) {
             return false;
         }

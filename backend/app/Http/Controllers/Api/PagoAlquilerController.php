@@ -86,7 +86,7 @@ class PagoAlquilerController extends Controller
         $pagoAlquiler->loadMissing('cliente');
 
         if (!$pagoAlquiler->cliente || !$pagoAlquiler->cliente->enviarAvisoImpago()) {
-            return response()->json(['message' => 'El cliente no tiene email registrado'], 422);
+            return response()->json(['message' => 'El cliente no tiene email registrado, no tiene pagos pendientes, o aún no ha pasado el margen de gracia desde el vencimiento'], 422);
         }
 
         return response()->json(['message' => 'Aviso enviado']);
