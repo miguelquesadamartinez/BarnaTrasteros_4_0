@@ -212,6 +212,7 @@ class PagoAlquilerController extends Controller
         // Evitar duplicado
         $existe = PagoAlquiler::where('tipo', $validated['tipo'])
             ->where('referencia_id', $validated['referencia_id'])
+            ->where('cliente_id', $validated['cliente_id'])
             ->where('mes', $validated['mes'])
             ->where('anyo', $validated['anyo'])
             ->exists();

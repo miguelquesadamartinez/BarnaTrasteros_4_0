@@ -38,9 +38,9 @@ export const usePisosStore = defineStore('pisos', () => {
     pisos.value = pisos.value.filter((p) => p.id !== id)
   }
 
-  async function darBajaPiso(id, force = false) {
+  async function darBajaPiso(id, force = false, importeFinal = null) {
     try {
-      const { data } = await api.post(`/pisos/${id}/dar-baja`, { force })
+      const { data } = await api.post(`/pisos/${id}/dar-baja`, { force, importe_final: importeFinal })
       const idx = pisos.value.findIndex((p) => p.id === id)
       if (idx !== -1) pisos.value[idx] = data
       return { ok: true }

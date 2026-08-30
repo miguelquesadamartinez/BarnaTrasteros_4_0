@@ -42,6 +42,7 @@ class GenerarPagosMensuales implements ShouldQueue
         foreach ($trasteros as $trastero) {
             $existe = PagoAlquiler::where('tipo', 'trastero')
                 ->where('referencia_id', $trastero->id)
+                ->where('cliente_id', $trastero->cliente_id)
                 ->where('mes', $this->mes)
                 ->where('anyo', $this->anyo)
                 ->exists();
@@ -68,6 +69,7 @@ class GenerarPagosMensuales implements ShouldQueue
         foreach ($pisos as $piso) {
             $existe = PagoAlquiler::where('tipo', 'piso')
                 ->where('referencia_id', $piso->id)
+                ->where('cliente_id', $piso->cliente_id)
                 ->where('mes', $this->mes)
                 ->where('anyo', $this->anyo)
                 ->exists();

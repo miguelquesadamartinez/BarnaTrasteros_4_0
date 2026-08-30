@@ -38,9 +38,9 @@ export const useTrasterosStore = defineStore('trasteros', () => {
     trasteros.value = trasteros.value.filter((t) => t.id !== id)
   }
 
-  async function darBajaTrastero(id, force = false) {
+  async function darBajaTrastero(id, force = false, importeFinal = null) {
     try {
-      const { data } = await api.post(`/trasteros/${id}/dar-baja`, { force })
+      const { data } = await api.post(`/trasteros/${id}/dar-baja`, { force, importe_final: importeFinal })
       const idx = trasteros.value.findIndex((t) => t.id === id)
       if (idx !== -1) trasteros.value[idx] = data
       return { ok: true }

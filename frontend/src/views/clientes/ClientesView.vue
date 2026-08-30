@@ -214,9 +214,22 @@
           />
         </div>
 
-        <div class="form-group" v-if="editing && unidadesVencimiento.length">
+        <div class="form-group" v-if="unidadesNuevas.length">
+          <label class="form-label">Importe a cobrar este mes</label>
+          <div v-for="row in unidadesNuevas" :key="row.key" class="form-row" style="align-items:flex-end">
+            <div class="form-group" style="flex:0 0 90px;margin-bottom:.5rem">
+              <small class="text-muted">{{ row.numero }}</small>
+            </div>
+            <div class="form-group" style="flex:0 0 160px;margin-bottom:.5rem">
+              <input v-model.number="importesFinalesNuevos[row.key]" class="form-control" type="number" step="0.01" min="0" />
+            </div>
+          </div>
+          <small class="text-muted">Prorrateado según los días de alquiler este mes. Precio mensual completo: {{ unidadesNuevas.map(r => formatMoney(r.precioMensual)).join(', ') }}.</small>
+        </div>
+
+        <div class="form-group" v-if="editing && unidadesExistentes.length">
           <label class="form-label">Fecha de vencimiento del alquiler</label>
-          <div v-for="row in unidadesVencimiento" :key="row.key" class="form-row" style="align-items:flex-end">
+          <div v-for="row in unidadesExistentes" :key="row.key" class="form-row" style="align-items:flex-end">
             <div class="form-group" style="flex:0 0 90px;margin-bottom:.5rem">
               <small class="text-muted">{{ row.numero }}</small>
             </div>
@@ -379,6 +392,8 @@ const generandoContrato = ref(false)
 const pendienteClienteEdit = ref(0)
 const fechaVencimientoEdits = ref({})
 const guardandoVencimiento = ref(null)
+const unidadesOriginalesIds = ref(new Set())
+const importesFinalesNuevos = ref({})
 const avisandoImpago = ref(false)
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
@@ -411,6 +426,20 @@ function sumarUnMes(fechaStr) {
   const [y, m, d] = fechaStr.split('-').map(Number)
   const fecha = new Date(y, m, d) // m sin -1 ya suma un mes (mismo día, mes siguiente)
   return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+}
+
+// Días facturables entre max(fecha_inicio, día 1 del mes) y, según hastaFinDeMes,
+// el último día del mes (asignación) u hoy (baja), entre días del mes.
+function prorratearImporte(precioMensual, fechaInicioStr, hastaFinDeMes) {
+  const hoy = new Date()
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  const diasEnMes = finMes.getDate()
+  const fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T00:00:00') : inicioMes
+  const desde = fechaInicio > inicioMes ? fechaInicio : inicioMes
+  const hasta = hastaFinDeMes ? finMes : hoy
+  const diasFacturables = Math.max(0, Math.floor((hasta - desde) / 86400000) + 1)
+  return Math.round((precioMensual * diasFacturables / diasEnMes) * 100) / 100
 }
 
 function formatDate(v) { return v ? v.split('T')[0] : '' }
@@ -555,14 +584,29 @@ const unidadesVencimiento = computed(() => {
   const rows = []
   for (const tid of form.value.trastero_ids) {
     const t = trasterosStore.trasteros.find((tt) => tt.id === tid)
-    if (t) rows.push({ key: `trastero-${t.id}`, tipo: 'trastero', id: t.id, numero: t.numero })
+    if (t) rows.push({ key: `trastero-${t.id}`, tipo: 'trastero', id: t.id, numero: t.numero, precioMensual: t.precio_mensual })
   }
   if (form.value.piso_id) {
     const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
-    if (p) rows.push({ key: `piso-${p.id}`, tipo: 'piso', id: p.id, numero: p.numero })
+    if (p) rows.push({ key: `piso-${p.id}`, tipo: 'piso', id: p.id, numero: p.numero, precioMensual: p.precio_mensual })
   }
   return rows
 })
+
+// Unidades que ya estaban asignadas a este cliente antes de abrir el
+// formulario (fecha de vencimiento editable) frente a las que se acaban de
+// añadir en esta misma edición (todavía sin guardar — se les pide el
+// importe a cobrar, prorrateado, que se enviará al asignarlas).
+const unidadesExistentes = computed(() => unidadesVencimiento.value.filter((r) => unidadesOriginalesIds.value.has(r.key)))
+const unidadesNuevas = computed(() => unidadesVencimiento.value.filter((r) => !unidadesOriginalesIds.value.has(r.key)))
+
+watch(unidadesNuevas, (rows) => {
+  for (const row of rows) {
+    if (importesFinalesNuevos.value[row.key] == null) {
+      importesFinalesNuevos.value[row.key] = prorratearImporte(row.precioMensual, todayStr(), true)
+    }
+  }
+}, { immediate: true })
 
 async function guardarVencimiento(row) {
   guardandoVencimiento.value = row.key
@@ -628,6 +672,8 @@ function openNew() {
   pendingFianzas.value = []
   nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
   fechaVencimientoEdits.value = {}
+  unidadesOriginalesIds.value = new Set()
+  importesFinalesNuevos.value = {}
   formError.value = ''
   showModal.value = true
 }
@@ -659,13 +705,18 @@ function openEdit(c) {
   formError.value = ''
 
   const vencInit = {}
+  const idsOriginales = new Set()
   for (const t of c.trasteros ?? []) {
     vencInit[`trastero-${t.id}`] = formatDate(t.fecha_vencimiento) || ''
+    idsOriginales.add(`trastero-${t.id}`)
   }
   if (piso) {
     vencInit[`piso-${piso.id}`] = formatDate(piso.fecha_vencimiento) || ''
+    idsOriginales.add(`piso-${piso.id}`)
   }
   fechaVencimientoEdits.value = vencInit
+  unidadesOriginalesIds.value = idsOriginales
+  importesFinalesNuevos.value = {}
 
   showModal.value = true
   loadFianzasCliente(c.id)
@@ -805,7 +856,8 @@ async function save() {
       if (!oldTrasteroIds.includes(id)) {
         const t = trasterosStore.trasteros.find((tt) => tt.id === id)
         const fechaHoy = todayStr()
-        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy) })
+        const importeFinal = importesFinalesNuevos.value[`trastero-${id}`] ?? null
+        if (t) await api.put(`/trasteros/${t.id}`, { ...t, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy), importe_final: importeFinal })
       }
     }
     // Desasignar piso anterior si cambió
@@ -817,7 +869,8 @@ async function save() {
     if (form.value.piso_id) {
       const p = pisosStore.pisos.find((pp) => pp.id === form.value.piso_id)
       const fechaHoy = todayStr()
-      if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy) })
+      const importeFinal = importesFinalesNuevos.value[`piso-${form.value.piso_id}`] ?? null
+      if (p) await api.put(`/pisos/${p.id}`, { ...p, cliente_id: cliente.id, fecha_inicio_alquiler: fechaHoy, fecha_vencimiento: sumarUnMes(fechaHoy), importe_final: importeFinal })
     }
     // Refrescar trasteros y pisos
     await trasterosStore.fetchTrasteros()

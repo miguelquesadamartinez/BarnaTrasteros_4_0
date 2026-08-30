@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\DaDeBajaUnidad;
+use App\Http\Controllers\Api\Concerns\GeneraPagoAlAsignar;
 use App\Http\Controllers\Controller;
 use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class TrasteroController extends Controller
 {
-    use DaDeBajaUnidad;
+    use DaDeBajaUnidad, GeneraPagoAlAsignar;
 
     public function index(Request $request): JsonResponse
     {
@@ -44,11 +45,18 @@ class TrasteroController extends Controller
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
+            'importe_final'        => 'nullable|numeric|min:0',
         ]);
+        $importeFinal = $validated['importe_final'] ?? null;
+        unset($validated['importe_final']);
 
         $trastero = Trastero::create($validated);
 
-        Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas'])->flush();
+        if ($trastero->cliente_id !== null) {
+            $this->generarPagoDelMes($trastero, 'trastero', $trastero->cliente_id, $importeFinal);
+        }
+
+        Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json($trastero->load('cliente'), 201);
     }
@@ -73,9 +81,18 @@ class TrasteroController extends Controller
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
+            'importe_final'        => 'nullable|numeric|min:0',
         ]);
+        $importeFinal = $validated['importe_final'] ?? null;
+        unset($validated['importe_final']);
+
+        $seAcabaDeAsignar = $trastero->cliente_id === null && $validated['cliente_id'] !== null;
 
         $trastero->update($validated);
+
+        if ($seAcabaDeAsignar) {
+            $this->generarPagoDelMes($trastero, 'trastero', $trastero->cliente_id, $importeFinal);
+        }
 
         Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 

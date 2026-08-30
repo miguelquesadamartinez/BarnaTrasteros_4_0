@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Concerns;
 
 use App\Models\Fianza;
 use App\Models\PagoAlquiler;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,11 @@ trait DaDeBajaUnidad
      * Da de baja al cliente de un trastero/piso. Si quedan pagos o fianzas
      * pendientes y no se ha forzado, devuelve un 409 con el detalle para
      * que el frontend pida confirmación antes de reintentarlo con force=1.
+     *
+     * Si se envía `importe_final`, se aplica como importe_total del pago del
+     * mes en curso de este cliente (creándolo si aún no existe) — así se deja
+     * constancia de cuánto debía pagar por el periodo hasta la baja, en vez
+     * de dejarle cargado el mes completo o nada.
      */
     protected function darDeBaja(Request $request, Model $unidad, string $tipo): JsonResponse
     {
@@ -39,6 +45,24 @@ trait DaDeBajaUnidad
                 'pagos_pendientes' => $pagosPendientes,
                 'fianzas_pendientes' => $fianzasPendientes,
             ], 409);
+        }
+
+        if ($request->filled('importe_final')) {
+            $ahora = Carbon::now();
+            $pago = PagoAlquiler::firstOrNew([
+                'tipo' => $tipo,
+                'referencia_id' => $unidad->id,
+                'cliente_id' => $unidad->cliente_id,
+                'mes' => $ahora->month,
+                'anyo' => $ahora->year,
+            ]);
+            $pago->numero = $unidad->numero;
+            $pago->importe_total = round((float) $request->input('importe_final'), 2);
+            if (!$pago->exists) {
+                $pago->pagado = 0;
+            }
+            $pago->save();
+            $pago->recalcularEstado();
         }
 
         $clienteAnterior = $unidad->cliente;

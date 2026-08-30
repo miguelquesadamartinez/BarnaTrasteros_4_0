@@ -115,6 +115,11 @@
             <small class="text-muted">A partir de esta fecha el pago se considera atrasado. Por defecto, un mes después del inicio.</small>
           </div>
         </div>
+        <div class="form-group" v-if="form.cliente_id && !(editing && originalHasCliente)">
+          <label class="form-label">Importe a cobrar este mes</label>
+          <input v-model.number="form.importe_final" class="form-control" type="number" step="0.01" min="0" />
+          <small class="text-muted">Prorrateado según los días de alquiler este mes. Precio mensual completo: {{ formatMoney(form.precio_mensual) }}.</small>
+        </div>
         <div class="form-group">
           <label class="form-label">Notas</label>
           <textarea v-model="form.notas" class="form-control" rows="2" placeholder="Notas opcionales..."></textarea>
@@ -157,6 +162,11 @@
         </ul>
         <p class="text-muted">Puedes dar de baja igualmente; estos importes seguirán pendientes en el sistema.</p>
       </div>
+      <div class="form-group">
+        <label class="form-label">Importe a cobrar este mes</label>
+        <input v-model.number="bajaImporteFinal" class="form-control" type="number" step="0.01" min="0" />
+        <small class="text-muted">Prorrateado según los días de alquiler este mes. Precio mensual completo: {{ formatMoney(bajaTarget?.precio_mensual) }}.</small>
+      </div>
       <div class="form-actions">
         <button class="btn btn-secondary" @click="showBaja = false">Cancelar</button>
         <button class="btn btn-danger" @click="doBaja" :disabled="bajaSaving">
@@ -195,22 +205,50 @@ const bajaSaving = ref(false)
 const bajaError = ref('')
 const bajaTarget = ref(null)
 const bajaInfo = ref(null)
+const bajaImporteFinal = ref(0)
 
 function formatDate(v) { return v ? v.split('T')[0] : '' }
 
+// Días facturables entre max(fecha_inicio, día 1 del mes) y, según hastaFinDeMes,
+// el último día del mes (asignación) u hoy (baja), entre días del mes.
+function prorratearImporte(precioMensual, fechaInicioStr, hastaFinDeMes) {
+  const hoy = new Date()
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  const diasEnMes = finMes.getDate()
+  const fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T00:00:00') : inicioMes
+  const desde = fechaInicio > inicioMes ? fechaInicio : inicioMes
+  const hasta = hastaFinDeMes ? finMes : hoy
+  const diasFacturables = Math.max(0, Math.floor((hasta - desde) / 86400000) + 1)
+  return Math.round((precioMensual * diasFacturables / diasEnMes) * 100) / 100
+}
+
 const emptyForm = () => ({
   numero: '', piso: '', tamanyo: '', precio_mensual: 0,
-  cliente_id: null, fecha_inicio_alquiler: '', fecha_vencimiento: '', notas: '',
+  cliente_id: null, fecha_inicio_alquiler: '', fecha_vencimiento: '', importe_final: null, notas: '',
 })
 const form = ref(emptyForm())
 
 // Al fijar (o cambiar) la fecha de inicio, se sugiere un mes después como
 // vencimiento por defecto — solo si el usuario no lo ha tocado ya a mano.
+// Lo mismo con el importe a cobrar este mes, prorrateado hasta fin de mes.
 watch(() => form.value.fecha_inicio_alquiler, (nueva, vieja) => {
   if (!nueva) return
   const sugeridaVieja = vieja ? sumarUnMes(vieja) : null
   if (!form.value.fecha_vencimiento || form.value.fecha_vencimiento === sugeridaVieja) {
     form.value.fecha_vencimiento = sumarUnMes(nueva)
+  }
+  const importeSugeridoViejo = vieja ? prorratearImporte(form.value.precio_mensual, vieja, true) : null
+  if (form.value.importe_final == null || form.value.importe_final === importeSugeridoViejo) {
+    form.value.importe_final = prorratearImporte(form.value.precio_mensual, nueva, true)
+  }
+})
+
+// Al asignar un cliente a un trastero que no tenía (asignación nueva), se
+// sugiere ya el importe prorrateado aunque la fecha de inicio siga vacía.
+watch(() => form.value.cliente_id, (nuevo, viejo) => {
+  if (nuevo && !viejo && !(editing.value && originalHasCliente.value)) {
+    form.value.importe_final = prorratearImporte(form.value.precio_mensual, form.value.fecha_inicio_alquiler, true)
   }
 })
 
@@ -259,6 +297,7 @@ function openEdit(t) {
     cliente_id: t.cliente_id ?? null,
     fecha_inicio_alquiler: formatDate(t.fecha_inicio_alquiler) ?? '',
     fecha_vencimiento: formatDate(t.fecha_vencimiento) ?? '',
+    importe_final: null,
     notas: t.notas ?? '',
     _id: t.id,
   }
@@ -275,6 +314,7 @@ function openBaja(t) {
   bajaTarget.value = t
   bajaInfo.value = null
   bajaError.value = ''
+  bajaImporteFinal.value = prorratearImporte(Number(t.precio_mensual), t.fecha_inicio_alquiler, false)
   showBaja.value = true
 }
 
@@ -282,7 +322,7 @@ async function doBaja() {
   bajaSaving.value = true
   bajaError.value = ''
   try {
-    const result = await store.darBajaTrastero(bajaTarget.value.id, !!bajaInfo.value)
+    const result = await store.darBajaTrastero(bajaTarget.value.id, !!bajaInfo.value, bajaImporteFinal.value)
     if (result.ok) {
       showBaja.value = false
     } else {

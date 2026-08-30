@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\DaDeBajaUnidad;
+use App\Http\Controllers\Api\Concerns\GeneraPagoAlAsignar;
 use App\Http\Controllers\Controller;
 use App\Models\Piso;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class PisoController extends Controller
 {
-    use DaDeBajaUnidad;
+    use DaDeBajaUnidad, GeneraPagoAlAsignar;
 
     public function index(Request $request): JsonResponse
     {
@@ -42,11 +43,18 @@ class PisoController extends Controller
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
+            'importe_final'        => 'nullable|numeric|min:0',
         ]);
+        $importeFinal = $validated['importe_final'] ?? null;
+        unset($validated['importe_final']);
 
         $piso = Piso::create($validated);
 
-        Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas'])->flush();
+        if ($piso->cliente_id !== null) {
+            $this->generarPagoDelMes($piso, 'piso', $piso->cliente_id, $importeFinal);
+        }
+
+        Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json($piso->load('cliente'), 201);
     }
@@ -70,9 +78,18 @@ class PisoController extends Controller
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
+            'importe_final'        => 'nullable|numeric|min:0',
         ]);
+        $importeFinal = $validated['importe_final'] ?? null;
+        unset($validated['importe_final']);
+
+        $seAcabaDeAsignar = $piso->cliente_id === null && $validated['cliente_id'] !== null;
 
         $piso->update($validated);
+
+        if ($seAcabaDeAsignar) {
+            $this->generarPagoDelMes($piso, 'piso', $piso->cliente_id, $importeFinal);
+        }
 
         Cache::tags(['pisos', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
