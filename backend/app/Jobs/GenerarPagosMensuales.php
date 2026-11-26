@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Http\Controllers\Api\Concerns\GeneraPagoAlAsignar;
 use App\Mail\ReportePagosGeneradosMail;
 use App\Models\PagoAlquiler;
 use App\Models\Piso;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Mail;
 
 class GenerarPagosMensuales implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, GeneraPagoAlAsignar;
 
     public int $mes;
     public int $anyo;
@@ -37,25 +38,49 @@ class GenerarPagosMensuales implements ShouldQueue
         $generados = 0;
         $pagosGeneradosIds = [];
 
-        // Generar pagos para trasteros alquilados
-        $trasteros = Trastero::whereNotNull('cliente_id')->get();
-        foreach ($trasteros as $trastero) {
-            $existe = PagoAlquiler::where('tipo', 'trastero')
-                ->where('referencia_id', $trastero->id)
-                ->where('cliente_id', $trastero->cliente_id)
-                ->where('mes', $this->mes)
-                ->where('anyo', $this->anyo)
-                ->exists();
+        $inicioMes = Carbon::create($this->anyo, $this->mes, 1)->startOfDay();
+        $finMes = $inicioMes->copy()->endOfMonth()->startOfDay();
 
-            if (!$existe) {
+        $unidades = [
+            'trastero' => Trastero::whereNotNull('cliente_id')->get(),
+            'piso'     => Piso::whereNotNull('cliente_id')->get(),
+        ];
+
+        foreach ($unidades as $tipo => $lista) {
+            foreach ($lista as $unidad) {
+                // Se usan el inquilino y el precio actuales, así que no tiene sentido
+                // cobrar un mes que terminó antes de que empezara el alquiler.
+                $fechaInicio = $unidad->fecha_inicio_alquiler
+                    ? Carbon::parse($unidad->fecha_inicio_alquiler)->startOfDay()
+                    : null;
+                if ($fechaInicio && $fechaInicio->greaterThan($finMes)) {
+                    continue;
+                }
+
+                $existe = PagoAlquiler::where('tipo', $tipo)
+                    ->where('referencia_id', $unidad->id)
+                    ->where('cliente_id', $unidad->cliente_id)
+                    ->where('mes', $this->mes)
+                    ->where('anyo', $this->anyo)
+                    ->exists();
+
+                if ($existe) {
+                    continue;
+                }
+
+                // Si el alquiler empezó a mitad de ese mes, se cobra la parte proporcional.
+                $importe = ($fechaInicio && $fechaInicio->greaterThan($inicioMes))
+                    ? $this->calcularProrrateo((float) $unidad->precio_mensual, $fechaInicio, $finMes, $this->mes, $this->anyo)
+                    : $unidad->precio_mensual;
+
                 $pago = PagoAlquiler::create([
-                    'cliente_id'    => $trastero->cliente_id,
-                    'tipo'          => 'trastero',
-                    'referencia_id' => $trastero->id,
-                    'numero'        => $trastero->numero,
+                    'cliente_id'    => $unidad->cliente_id,
+                    'tipo'          => $tipo,
+                    'referencia_id' => $unidad->id,
+                    'numero'        => $unidad->numero,
                     'mes'           => $this->mes,
                     'anyo'          => $this->anyo,
-                    'importe_total' => $trastero->precio_mensual,
+                    'importe_total' => $importe,
                     'pagado'        => 0,
                     'estado'        => 'pendiente',
                 ]);
@@ -64,34 +89,7 @@ class GenerarPagosMensuales implements ShouldQueue
             }
         }
 
-        // Generar pagos para pisos alquilados
-        $pisos = Piso::whereNotNull('cliente_id')->get();
-        foreach ($pisos as $piso) {
-            $existe = PagoAlquiler::where('tipo', 'piso')
-                ->where('referencia_id', $piso->id)
-                ->where('cliente_id', $piso->cliente_id)
-                ->where('mes', $this->mes)
-                ->where('anyo', $this->anyo)
-                ->exists();
-
-            if (!$existe) {
-                $pago = PagoAlquiler::create([
-                    'cliente_id'    => $piso->cliente_id,
-                    'tipo'          => 'piso',
-                    'referencia_id' => $piso->id,
-                    'numero'        => $piso->numero,
-                    'mes'           => $this->mes,
-                    'anyo'          => $this->anyo,
-                    'importe_total' => $piso->precio_mensual,
-                    'pagado'        => 0,
-                    'estado'        => 'pendiente',
-                ]);
-                $pagosGeneradosIds[] = $pago->id;
-                $generados++;
-            }
-        }
-
-        Cache::tags(['pagos-alquiler'])->flush();
+        Cache::tags(['pagos-alquiler', 'relatorio', 'facturas'])->flush();
 
         $pagosGenerados = PagoAlquiler::with('cliente')
             ->whereIn('id', $pagosGeneradosIds)

@@ -62,6 +62,16 @@
                             {{ number_format($pago['importe_total'], 2, ',', '.') }} €
                         </td>
                     </tr>
+                    @php($pendienteRecibo = max(0, (float) $pago['importe_total'] - (float) $pago['pagado']))
+                    @if ($pendienteRecibo > 0)
+                    <tr>
+                        <td style="padding:9px 8px;font-size:.98rem;color:#222;border:1px solid #e5e7eb;">Pendiente de pago</td>
+                        <td style="padding:9px 8px;font-size:.98rem;color:#222;border:1px solid #e5e7eb;"></td>
+                        <td style="padding:9px 8px;font-size:.98rem;color:#b91c1c;font-weight:bold;text-align:right;border:1px solid #e5e7eb;">
+                            -{{ number_format($pendienteRecibo, 2, ',', '.') }} €
+                        </td>
+                    </tr>
+                    @endif
                 </tbody>
             </table>
         </div>
@@ -72,7 +82,7 @@
                 <table style="width:100%;border-collapse:collapse;">
                     <tr>
                         <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;">TOTAL RECIBO</td>
-                        <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;text-align:right;">{{ number_format($pago['importe_total'], 2, ',', '.') }} €</td>
+                        <td style="padding:10px 12px;font-size:1.1rem;color:#111827;font-weight:bold;background:#fcc105;border:1px solid #d1a901;text-align:right;">{{ number_format($pago['pagado'], 2, ',', '.') }} €</td>
                     </tr>
                 </table>
             </div>

@@ -114,9 +114,12 @@ async function buildPdf(titulo, numDoc, hoy, infoRef, conceptoRows, total, notaI
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     doc.text(String(concepto ?? '—'), 18, y + 6)
-    doc.text(String(detalle ?? '—'), 100, y + 6)
+    doc.text(doc.splitTextToSize(String(detalle ?? '—'), 60)[0], 100, y + 6)
     doc.setFont('helvetica', 'bold')
-    doc.text(fmt(importe), 185, y + 6, { align: 'right' })
+    // Filas informativas (p. ej. notas) sin importe: no imprimir "0,00 €".
+    if (importe !== null && importe !== '' && importe !== undefined) {
+      doc.text(fmt(importe), 185, y + 6, { align: 'right' })
+    }
     y += ROW
   })
 
@@ -160,7 +163,7 @@ export function usePdfRecibo() {
     const conceptoRows = [
       [`Arrendamiento ${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`, `${MESES[pago.mes]} ${pago.anyo}`, detalle.importe],
     ]
-    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
+    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, null])
     const doc = await buildPdf('RECIBO DE PAGO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
     doc.save(`Recibo_alquiler_${pago.tipo}_ref_${pago.referencia_id}_${pago.mes}-${pago.anyo}_id_${detalle.id}.pdf`)
   }
@@ -176,7 +179,7 @@ export function usePdfRecibo() {
     const conceptoRows = [
       [gasto.descripcion, fmtDate(detalle.fecha_pago), detalle.importe],
     ]
-    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, ''])
+    if (detalle.notas) conceptoRows.push(['Notas', detalle.notas, null])
     const doc = await buildPdf('RECIBO DE GASTO', numDoc, hoy, infoRef, conceptoRows, detalle.importe)
     doc.save(`Recibo_gasto_${gasto.id}_pago_${detalle.id}.pdf`)
   }
@@ -189,12 +192,15 @@ export function usePdfRecibo() {
       pago.cliente ? `${pago.cliente.nombre} ${pago.cliente.apellido}` : null,
       `Número identificación fiscal: ${pago.cliente.dni}`,
     ]
+    // Un recibo acredita lo cobrado: si el mes no está pagado del todo se indica lo
+    // pendiente y el total es lo efectivamente pagado, no el importe del mes.
     const pendiente = Math.max(0, +pago.importe_total - +pago.pagado)
     const conceptoRows = [
       [`Arrendamiento ${pago.tipo === 'piso' ? 'Piso' : 'Trastero'} ${pago.numero ?? pago.referencia_id}`, `${MESES[pago.mes]} ${pago.anyo}`, pago.importe_total],
     ]
-    if (pago.notas) conceptoRows.push(['Notas', pago.notas, ''])
-    const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, pago.importe_total)
+    if (pendiente > 0) conceptoRows.push(['Pendiente de pago', '', -pendiente])
+    if (pago.notas) conceptoRows.push(['Notas', pago.notas, null])
+    const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, +pago.pagado)
     doc.save(`Recibo_alquiler_${pago.tipo}_ref_${pago.referencia_id}_${pago.mes}-${pago.anyo}.pdf`)
   }
 
@@ -211,7 +217,7 @@ export function usePdfRecibo() {
     const conceptoRows = [
       [gasto.descripcion,   `Emisión: ${fmtDate(gasto.fecha_emision)}`,      gasto.importe_total],
     ]
-    if (gasto.notas) conceptoRows.push(['Notas', gasto.notas, ''])
+    if (gasto.notas) conceptoRows.push(['Notas', gasto.notas, null])
     const doc = await buildPdf('RECIBO', numDoc, hoy, infoRef, conceptoRows, gasto.importe_total)
     doc.save(`Recibo_gasto_${gasto.id}_${gasto.tipo}.pdf`)
   }
@@ -392,7 +398,7 @@ export function usePdfRecibo() {
     const conceptoRows = [
       [`Devolución fianza ${tipoLabel} ${fianza.numero ?? ''}`.trim(), `Entrega: ${fmtDate(fianza.fecha_entrega)} — Devolución: ${fmtDate(fianza.fecha_devolucion)}`, fianza.importe],
     ]
-    if (fianza.notas) conceptoRows.push(['Notas', fianza.notas, ''])
+    if (fianza.notas) conceptoRows.push(['Notas', fianza.notas, null])
     const doc = await buildPdf('DEVOLUCIÓN DE FIANZA', numDoc, hoy, infoRef, conceptoRows, fianza.importe, false)
     const nombreCliente = fianza.cliente
       ? `${fianza.cliente.nombre}_${fianza.cliente.apellido}`.replace(/\s+/g, '_')

@@ -33,6 +33,11 @@ class MantenimientoController extends Controller
         if ($anyo < 2000 || $anyo > 2100) {
             return response()->json(['error' => 'El año no es válido.'], 422);
         }
+        // Se generan con el inquilino y precio actuales: un mes futuro produciría
+        // recibos (y avisos de impago) por meses que aún no han llegado.
+        if ($anyo * 12 + $mes > $ahora->year * 12 + $ahora->month) {
+            return response()->json(['error' => 'No se pueden generar pagos de meses futuros.'], 422);
+        }
 
         // Contar registros existentes antes
         $antes = PagoAlquiler::where('mes', $mes)->where('anyo', $anyo)->count();

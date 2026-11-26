@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Trastero;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 
 class TrasteroController extends Controller
@@ -41,7 +42,7 @@ class TrasteroController extends Controller
             'piso'                 => 'required|string|max:20',
             'tamanyo'              => 'required|string|max:50|exists:tamanyo_trasteros,nombre',
             'precio_mensual'       => 'required|numeric|min:0',
-            'cliente_id'           => 'nullable|exists:clientes,id',
+            'cliente_id'           => ['nullable', Rule::exists('clientes', 'id')->whereNull('archivado_at')],
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
@@ -49,6 +50,7 @@ class TrasteroController extends Controller
         ]);
         $importeFinal = $validated['importe_final'] ?? null;
         unset($validated['importe_final']);
+        $validated = $this->completarFechasAlquiler($validated);
 
         $trastero = Trastero::create($validated);
 
@@ -77,7 +79,7 @@ class TrasteroController extends Controller
             'piso'                 => 'required|string|max:20',
             'tamanyo'              => 'required|string|max:50|exists:tamanyo_trasteros,nombre',
             'precio_mensual'       => 'required|numeric|min:0',
-            'cliente_id'           => 'nullable|exists:clientes,id',
+            'cliente_id'           => ['nullable', Rule::exists('clientes', 'id')->whereNull('archivado_at')],
             'fecha_inicio_alquiler'=> 'nullable|date',
             'fecha_vencimiento'    => 'nullable|date',
             'notas'                => 'nullable|string',
@@ -85,6 +87,14 @@ class TrasteroController extends Controller
         ]);
         $importeFinal = $validated['importe_final'] ?? null;
         unset($validated['importe_final']);
+        $validated = $this->completarFechasAlquiler($validated);
+
+        if ($trastero->cliente_id !== null && !empty($validated['cliente_id']) && (int) $validated['cliente_id'] !== (int) $trastero->cliente_id) {
+            return response()->json([
+                'message' => 'Esta unidad ya está alquilada a otro cliente. Dale de baja primero.',
+                'errors'  => ['cliente_id' => ['Esta unidad ya está alquilada a otro cliente. Dale de baja primero.']],
+            ], 422);
+        }
 
         $seAcabaDeAsignar = $trastero->cliente_id === null && $validated['cliente_id'] !== null;
 
@@ -118,10 +128,41 @@ class TrasteroController extends Controller
             ], 422);
         }
 
+        // Los pagos y fianzas guardan referencia_id sin clave foránea: borrar la
+        // unidad los dejaría huérfanos (seguirían contando como deuda y saliendo
+        // en facturas de una unidad que ya no existe).
+        $tienePagos = \App\Models\PagoAlquiler::where('tipo', 'trastero')->where('referencia_id', $trastero->id)->exists();
+        $tieneFianzas = \App\Models\Fianza::where('tipo', 'trastero')->where('referencia_id', $trastero->id)->exists();
+        if ($tienePagos || $tieneFianzas) {
+            return response()->json([
+                'message' => 'No se puede eliminar el trastero: tiene pagos o fianzas registrados. Conserva la unidad para mantener el historial.',
+            ], 422);
+        }
+
         $trastero->delete();
 
         Cache::tags(['trasteros', 'clientes', 'relatorio', 'facturas', 'pagos-alquiler'])->flush();
 
         return response()->json(['message' => 'Trastero eliminado correctamente']);
+    }
+
+    /**
+     * Una unidad alquilada sin fecha de inicio no tiene vencimiento ni se puede
+     * prorratear: si se asigna un cliente sin fechas se toma hoy como inicio y
+     * un mes después como vencimiento.
+     */
+    private function completarFechasAlquiler(array $validated): array
+    {
+        if (empty($validated['cliente_id'])) {
+            return $validated;
+        }
+        if (empty($validated['fecha_inicio_alquiler'])) {
+            $validated['fecha_inicio_alquiler'] = now()->toDateString();
+        }
+        if (empty($validated['fecha_vencimiento'])) {
+            $validated['fecha_vencimiento'] = \Carbon\Carbon::parse($validated['fecha_inicio_alquiler'])->addMonthNoOverflow()->toDateString();
+        }
+
+        return $validated;
     }
 }

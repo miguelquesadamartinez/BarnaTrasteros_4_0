@@ -19,7 +19,7 @@ class RevisionPrecioController extends Controller
     public function historial(Request $request): JsonResponse
     {
         $historial = HistorialPrecio::orderBy('created_at', 'desc')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(min(max($request->integer('per_page', 20), 1), 1000));
 
         return response()->json($historial);
     }

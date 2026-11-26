@@ -64,7 +64,7 @@ class PagoAlquilerController extends Controller
                 $query->where('mes', $request->mes);
             }
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = min(max($request->integer('per_page', 15), 1), 1000);
 
             return $query->orderBy('anyo', 'desc')->orderBy('mes', 'desc')->paginate($perPage);
         });
@@ -205,9 +205,18 @@ class PagoAlquilerController extends Controller
             'referencia_id' => 'required|integer',
             'mes'           => 'required|integer|min:1|max:12',
             'anyo'          => 'required|integer|min:2000|max:2100',
-            'importe_total' => 'required|numeric|min:0',
+            'importe_total' => 'required|numeric|min:0.01',
             'notas'         => 'nullable|string',
         ]);
+
+        // La referencia no tiene clave foránea: sin esta comprobación se podían crear
+        // recibos de unidades inexistentes que contaban como deuda.
+        $unidad = $validated['tipo'] === 'trastero'
+            ? \App\Models\Trastero::find($validated['referencia_id'])
+            : \App\Models\Piso::find($validated['referencia_id']);
+        if (!$unidad) {
+            return response()->json(['error' => 'El trastero o piso indicado no existe.'], 422);
+        }
 
         // Evitar duplicado
         $existe = PagoAlquiler::where('tipo', $validated['tipo'])
@@ -221,12 +230,7 @@ class PagoAlquilerController extends Controller
             return response()->json(['error' => 'Ya existe un registro de pago para ese mes/año'], 422);
         }
 
-        // Resolver numero del trastero o piso
-        if ($validated['tipo'] === 'trastero') {
-            $validated['numero'] = \App\Models\Trastero::find($validated['referencia_id'])?->numero;
-        } else {
-            $validated['numero'] = \App\Models\Piso::find($validated['referencia_id'])?->numero;
-        }
+        $validated['numero'] = $unidad->numero;
 
         $validated['pagado'] = 0;
         $validated['estado'] = 'pendiente';
@@ -320,6 +324,10 @@ class PagoAlquilerController extends Controller
                     $detalle->toArray()
                 ));
         } else {
+            // Un recibo acredita un cobro: no se envía de un mes del que no se ha cobrado nada.
+            if ((float) $pago->pagado <= 0) {
+                return response()->json(['message' => 'Este mes no tiene ningún cobro registrado: no se puede enviar un recibo.'], 422);
+            }
             $pdf = app('dompdf.wrapper');
             $pdf->loadView('emails.recibo-pago-total', [
                 'pago' => $pago->toArray(),
@@ -331,7 +339,7 @@ class PagoAlquilerController extends Controller
                     $pago->mes,
                     $pago->anyo,
                     $pago->toArray(),
-                    $pago->importe_total,
+                    $pago->pagado,
                     $pdfData,
                     null
                 ));

@@ -51,9 +51,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], $e->getStatusCode());
             }
 
-            // Cualquier otro error (BD, PHP, etc.): se registra en el log
-            // pero no se expone el mensaje interno al cliente.
-            report($e);
+            // Cualquier otro error (BD, PHP, etc.): no se expone el mensaje interno
+            // al cliente. No se llama a report($e): Laravel ya lo reporta antes de
+            // renderizar, y hacerlo aquí enviaba el email de excepción por duplicado.
 
             return response()->json([
                 'message' => 'Error interno del servidor. Inténtalo de nuevo.',

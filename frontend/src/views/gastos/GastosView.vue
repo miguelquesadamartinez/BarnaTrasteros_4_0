@@ -359,7 +359,7 @@
         <hr />
         <h4>Subir nuevas imágenes</h4>
         <div class="form-group">
-          <input type="file" multiple accept="image/*" @change="onFilesChange" class="form-control" />
+          <input type="file" multiple accept="image/jpeg,image/png" @change="onFilesChange" class="form-control" />
         </div>
         <div class="form-actions">
           <button class="btn btn-primary" :disabled="!filesToUpload.length || uploading" @click="subirImagenes">
@@ -632,8 +632,13 @@ async function subirImagenes() {
   try {
     const fd = new FormData()
     filesToUpload.value.forEach((f) => fd.append('imagenes[]', f))
-    const updated = await store.subirImagenes(imagenTarget.value.id, fd)
-    imagenTarget.value = updated
+    // La API devuelve solo { imagenes: [nuevas] }: se añaden al gasto abierto en vez de
+    // sustituirlo, que lo dejaba sin id y las siguientes acciones iban a gastos/undefined.
+    const { imagenes } = await store.subirImagenes(imagenTarget.value.id, fd)
+    imagenTarget.value = {
+      ...imagenTarget.value,
+      imagenes: [...(imagenTarget.value.imagenes || []), ...imagenes],
+    }
     filesToUpload.value = []
     await loadGastos(currentPage.value)
   } catch (e) {
@@ -646,8 +651,11 @@ async function subirImagenes() {
 async function eliminarImg(imgId) {
   if (!confirm('¿Eliminar esta imagen?')) return
   try {
-    const updated = await store.eliminarImagen(imagenTarget.value.id, imgId)
-    imagenTarget.value = updated
+    await store.eliminarImagen(imagenTarget.value.id, imgId)
+    imagenTarget.value = {
+      ...imagenTarget.value,
+      imagenes: (imagenTarget.value.imagenes || []).filter((i) => i.id !== imgId),
+    }
     await loadGastos(currentPage.value)
   } catch (e) {
     alert(e.displayMessage || 'Error al eliminar')

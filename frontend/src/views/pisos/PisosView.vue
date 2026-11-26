@@ -91,7 +91,7 @@
         <div class="form-row" v-if="form.cliente_id">
           <div class="form-group">
             <label class="form-label">Fecha inicio alquiler</label>
-            <input v-model="form.fecha_inicio_alquiler" class="form-control" type="date" />
+            <input v-model="form.fecha_inicio_alquiler" class="form-control" type="date" :required="!!form.cliente_id" />
           </div>
           <div class="form-group">
             <label class="form-label">Fecha de vencimiento</label>
@@ -219,7 +219,9 @@ watch(() => form.value.fecha_inicio_alquiler, (nueva, vieja) => {
   if (!form.value.fecha_vencimiento || form.value.fecha_vencimiento === sugeridaVieja) {
     form.value.fecha_vencimiento = sumarUnMes(nueva)
   }
-  const importeSugeridoViejo = vieja ? prorratearImporte(form.value.precio_mensual, vieja, true) : null
+  // Con vieja vacía, el importe sugerido era el del mes completo (desde el día 1):
+  // compararlo con null impedía recalcularlo al poner la fecha después del cliente.
+  const importeSugeridoViejo = prorratearImporte(form.value.precio_mensual, vieja || '', true)
   if (form.value.importe_final == null || form.value.importe_final === importeSugeridoViejo) {
     form.value.importe_final = prorratearImporte(form.value.precio_mensual, nueva, true)
   }
@@ -229,6 +231,13 @@ watch(() => form.value.fecha_inicio_alquiler, (nueva, vieja) => {
 // ya el importe prorrateado aunque la fecha de inicio siga vacía.
 watch(() => form.value.cliente_id, (nuevo, viejo) => {
   if (nuevo && !viejo && !(editing.value && originalHasCliente.value)) {
+    // Sin fecha de inicio la unidad quedaría alquilada sin inicio ni vencimiento
+    // y el importe se calcularía desde el día 1: se propone hoy por defecto.
+    // El watch de fecha_inicio_alquiler sugiere el vencimiento a partir de ella.
+    if (!form.value.fecha_inicio_alquiler) {
+      const h = new Date()
+      form.value.fecha_inicio_alquiler = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`
+    }
     form.value.importe_final = prorratearImporte(form.value.precio_mensual, form.value.fecha_inicio_alquiler, true)
   }
 })

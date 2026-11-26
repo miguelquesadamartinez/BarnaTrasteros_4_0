@@ -36,7 +36,9 @@ class RelatorioController extends Controller
                         'dni'      => $t->cliente->dni,
                         'telefono' => $t->cliente->telefono,
                     ] : null,
-                    'fecha_inicio_alquiler' => $t->fecha_inicio_alquiler,
+                    // Como Carbon dentro de un array se serializa en UTC (medianoche de Madrid =
+                    // 23:00 del día anterior) y la UI mostraba un día menos.
+                    'fecha_inicio_alquiler' => $t->fecha_inicio_alquiler?->toDateString(),
                 ];
             });
 
@@ -73,7 +75,9 @@ class RelatorioController extends Controller
                         'dni'      => $p->cliente->dni,
                         'telefono' => $p->cliente->telefono,
                     ] : null,
-                    'fecha_inicio_alquiler' => $p->fecha_inicio_alquiler,
+                    // Como Carbon dentro de un array se serializa en UTC (medianoche de Madrid =
+                    // 23:00 del día anterior) y la UI mostraba un día menos.
+                    'fecha_inicio_alquiler' => $p->fecha_inicio_alquiler?->toDateString(),
                 ];
             });
 

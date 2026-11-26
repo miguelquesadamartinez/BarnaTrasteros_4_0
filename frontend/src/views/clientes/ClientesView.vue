@@ -257,7 +257,7 @@
               class="badge badge-info"
               style="display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem;padding:.25rem .55rem"
             >
-              {{ Number(f.importe).toFixed(2) }} € — {{ formatFecha(f.fecha_entrega) }}{{ f.numero ? ` (${f.numero})` : '' }}
+              {{ Number(f.importe).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} € — {{ formatFecha(f.fecha_entrega) }}{{ f.numero ? ` (${f.numero})` : '' }}
               <button
                 type="button"
                 @click="quitarFianza(f)"
@@ -291,6 +291,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" @click="addFianza" :disabled="addingFianza || !unidadFianzaSeleccionada">+ Añadir fianza</button>
               </div>
             </div>
+            <div v-if="fianzaError" class="alert alert-danger" style="font-size:.85rem;padding:.5rem .75rem">{{ fianzaError }}</div>
           </template>
           <small class="text-muted">
             {{ editing ? 'Al quitar una fianza se marca como devuelta y desaparece del listado de fianzas.' : 'Se crearán al guardar el cliente.' }}
@@ -491,10 +492,34 @@ async function loadFianzasCliente(clienteId) {
   fianzasCliente.value = await fianzasStore.fetchFianzasCliente(clienteId)
 }
 
+// Los errores de fianzas se muestran junto a su sección: el error general del
+// formulario queda arriba del modal, fuera de la vista, y parecía que no pasaba nada.
+const fianzaError = ref('')
+
 async function addFianza() {
-  if (!nuevaFianza.value.importe || !nuevaFianza.value.fecha_entrega || !unidadFianzaSeleccionada.value) return
+  fianzaError.value = ''
+  if (!unidadFianzaSeleccionada.value) return
+  if (!(Number(nuevaFianza.value.importe) > 0)) {
+    fianzaError.value = 'Indica un importe de fianza mayor que 0.'
+    return
+  }
+  if (!nuevaFianza.value.fecha_entrega) {
+    fianzaError.value = 'Indica la fecha de entrega de la fianza.'
+    return
+  }
   const [tipo, id, numero] = unidadFianzaSeleccionada.value.split(':')
   const unidad = { tipo, referencia_id: Number(id), numero }
+
+  // En edición la fianza se crea al momento, pero la unidad recién elegida aún no
+  // está asignada en el servidor hasta pulsar Actualizar.
+  if (editing.value) {
+    const lista = tipo === 'piso' ? pisosStore.pisos : trasterosStore.trasteros
+    const guardada = lista.find((u) => u.id === Number(id))?.cliente_id === form.value._id
+    if (!guardada) {
+      fianzaError.value = `Pulsa primero "Actualizar" para guardar la asignación de ${numero}; después podrás añadir su fianza.`
+      return
+    }
+  }
 
   if (!editing.value) {
     pendingFianzas.value.push({
@@ -518,7 +543,7 @@ async function addFianza() {
     nuevaFianza.value = { importe: null, fecha_entrega: todayStr() }
     await loadFianzasCliente(form.value._id)
   } catch (e) {
-    formError.value = e.displayMessage || 'Error al añadir la fianza'
+    fianzaError.value = e.displayMessage || 'Error al añadir la fianza'
   } finally {
     addingFianza.value = false
   }
@@ -529,6 +554,10 @@ async function quitarFianza(f) {
     pendingFianzas.value = pendingFianzas.value.filter((p) => p._tempId !== f._tempId)
     return
   }
+  const importe = Number(f.importe).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const aviso = form.value.email ? ' Se enviará al cliente un email con el justificante de devolución.' : ''
+  if (!confirm(`¿Marcar como devuelta la fianza de ${importe} €${f.numero ? ` (${f.numero})` : ''}?${aviso}`)) return
+  fianzaError.value = ''
   try {
     await fianzasStore.updateFianza(f.id, {
       cliente_id: f.cliente_id,
@@ -542,7 +571,7 @@ async function quitarFianza(f) {
     })
     await loadFianzasCliente(form.value._id)
   } catch (e) {
-    formError.value = e.displayMessage || 'Error al quitar la fianza'
+    fianzaError.value = e.displayMessage || 'Error al quitar la fianza'
   }
 }
 
@@ -663,6 +692,7 @@ function onFotoChange(e) {
 }
 
 function openNew() {
+  fianzaError.value = ''
   editing.value = false
   form.value = emptyForm()
   currentFoto.value = null
@@ -679,6 +709,7 @@ function openNew() {
 }
 
 function openEdit(c) {
+  fianzaError.value = ''
   editing.value = true
   const piso = pisosStore.pisos.find((p) => p.cliente_id === c.id)
   form.value = {
@@ -823,6 +854,7 @@ async function save() {
     fd.append('apellido', form.value.apellido)
     fd.append('dni', form.value.dni)
     fd.append('telefono', form.value.telefono || '')
+    fd.append('email', form.value.email || '')
     fd.append('direccion', form.value.direccion || '')
     fd.append('codigo_postal', form.value.codigo_postal || '')
     fd.append('ciudad', form.value.ciudad || '')

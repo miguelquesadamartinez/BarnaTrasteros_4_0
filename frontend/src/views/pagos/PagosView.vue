@@ -105,9 +105,9 @@
                     @click="openPago(p)"
                   >💰</button>
                   <button v-if="p.estado !== 'pendiente'" class="btn btn-info btn-sm" title="Ver detalle del pago" @click="openDetalle(p)">📋</button>
-                  <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
+                  <button v-if="p.estado !== 'pendiente'" class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
                   <button
-                    v-if="tieneClienteAsociado(p)"
+                    v-if="tieneClienteAsociado(p) && p.estado !== 'pendiente'"
                     class="btn btn-success btn-sm"
                     title="Enviar recibo por email"
                     @click="enviarReciboPagoEmail(p)"

@@ -40,7 +40,7 @@ class GastoController extends Controller
                 $query->whereYear('fecha_emision', $request->integer('anyo'));
             }
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = min(max($request->integer('per_page', 15), 1), 1000);
             $result = $query->orderBy('fecha_emision', 'desc')->paginate($perPage);
 
             $result->getCollection()->each(function ($gasto) {
@@ -126,8 +126,11 @@ class GastoController extends Controller
             'referencia_id'     => 'nullable|integer',
             'fecha_emision'     => 'required|date',
             'fecha_vencimiento' => 'nullable|date',
-            'importe_total'     => 'required|numeric|min:0',
+            'importe_total'     => 'required|numeric|min:' . (float) $gasto->pagado,
             'notas'             => 'nullable|string',
+        ], [
+            // Bajar el total por debajo de lo ya pagado dejaba un pendiente negativo.
+            'importe_total.min' => sprintf('El importe total no puede ser menor que lo ya pagado (%s €). Elimina antes algún pago si es necesario.', number_format((float) $gasto->pagado, 2, ',', '.')),
         ]);
 
         $gasto->update($validated);

@@ -11,8 +11,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Generar pagos mensuales el primer día de cada mes a las 00:05
-Schedule::job(new GenerarPagosMensuales)->monthlyOn(1, '00:05');
+// Generar los pagos del mes en curso. Se lanza cada hora (y no solo el día 1)
+// para que, si el equipo estaba apagado el día 1, se generen en cuanto vuelva
+// a encenderse. Es idempotente: no duplica recibos existentes y solo envía el
+// email de reporte si ha creado alguno.
+Schedule::job(new GenerarPagosMensuales)->hourlyAt(5)->name('pagos:generar-mes-en-curso')->withoutOverlapping();
 //Schedule::job(new GenerarPagosMensuales)->everyThirtyMinutes();
 
 // Backup automático diario a las 23:00

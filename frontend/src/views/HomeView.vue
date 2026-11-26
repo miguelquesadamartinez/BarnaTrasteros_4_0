@@ -100,7 +100,7 @@
                       style="background-color:#ffe066;border-color:#ffe066;color:#664d03;"
                     >💰 Pagar</button>
                     <button class="btn btn-info btn-sm" title="Ver detalle" @click="openDetalle(p)">📋 Ver</button>
-                    <button class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
+                    <button v-if="p.estado !== 'pendiente'" class="btn btn-secondary btn-sm" title="Imprimir recibo" @click="generarReciboPagoTotal(p)">📄</button>
                     <button
                       class="btn btn-success btn-sm"
                       title="Enviar email recordando el pago pendiente"

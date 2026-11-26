@@ -41,7 +41,7 @@ class FianzaController extends Controller
                 });
             }
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = min(max($request->integer('per_page', 15), 1), 1000);
             return $query->orderBy('fecha_entrega', 'desc')->paginate($perPage);
         });
 
@@ -69,6 +69,18 @@ class FianzaController extends Controller
             throw ValidationException::withMessages([
                 'cliente_id' => 'El cliente no tiene ningún trastero o piso asociado; no se puede añadir una fianza.',
             ]);
+        }
+
+        // Si se vincula a una unidad concreta, debe ser una de las del cliente.
+        if (!empty($validated['tipo']) && !empty($validated['referencia_id'])) {
+            $relacion = $validated['tipo'] === 'piso' ? $cliente->pisos() : $cliente->trasteros();
+            $unidad = $relacion->whereKey($validated['referencia_id'])->first();
+            if (!$unidad) {
+                throw ValidationException::withMessages([
+                    'referencia_id' => 'El trastero o piso indicado no está asignado a este cliente.',
+                ]);
+            }
+            $validated['numero'] = $unidad->numero;
         }
 
         $fianza = Fianza::create($validated);

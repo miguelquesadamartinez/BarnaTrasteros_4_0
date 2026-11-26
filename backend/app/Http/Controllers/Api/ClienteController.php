@@ -33,7 +33,7 @@ class ClienteController extends Controller
                 });
             }
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = min(max($request->integer('per_page', 15), 1), 1000);
             return $query->orderBy('apellido')->orderBy('nombre')->paginate($perPage);
         });
 
@@ -65,7 +65,7 @@ class ClienteController extends Controller
                 });
             }
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = min(max($request->integer('per_page', 15), 1), 1000);
             return $query->orderByDesc('archivado_at')->paginate($perPage);
         });
 

@@ -2,7 +2,14 @@
   <div id="app-root">
     <nav class="navbar">
       <router-link to="/" class="navbar-brand">BarnaTrasteros</router-link>
-      <ul class="navbar-menu">
+      <button
+        class="navbar-toggle"
+        type="button"
+        :aria-expanded="mobileOpen"
+        aria-label="Abrir menú"
+        @click.stop="mobileOpen = !mobileOpen"
+      >{{ mobileOpen ? '✕' : '☰' }}</button>
+      <ul class="navbar-menu" :class="{ 'mobile-open': mobileOpen }">
         <li><router-link to="/busqueda">🔍 Búsqueda</router-link></li>
         <li class="nav-dropdown" :class="{ open: openMenu === 'inmuebles' }" @mouseenter="openDropdown('inmuebles')" @mouseleave="scheduleClose">
           <button class="nav-dropdown-toggle" @click="toggleMenu('inmuebles')">🏢 Inmuebles y Clientes ▾</button>
@@ -50,15 +57,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 const openMenu = ref(null)
+// En pantallas estrechas el menú no cabía en la barra (quedaba fuera de la vista):
+// se agrupa tras un botón ☰ y se cierra al navegar.
+const mobileOpen = ref(false)
+const route = useRoute()
+watch(() => route.fullPath, () => {
+  mobileOpen.value = false
+  openMenu.value = null
+})
 let closeTimer = null
 
+// En pantallas táctiles el toque dispara mouseenter y luego click: el hover abría el
+// submenú y el click (toggle) lo volvía a cerrar. El hover solo aplica con ratón.
+const conRaton = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches
 function openDropdown(key) {
+  if (!conRaton()) return
   clearTimeout(closeTimer)
   openMenu.value = key
 }
 function scheduleClose() {
+  if (!conRaton()) return
   clearTimeout(closeTimer)
   closeTimer = setTimeout(() => { openMenu.value = null }, 250)
 }
@@ -70,6 +91,9 @@ function handleOutsideClick(e) {
   if (!e.target.closest('.nav-dropdown')) {
     clearTimeout(closeTimer)
     openMenu.value = null
+  }
+  if (!e.target.closest('.navbar')) {
+    mobileOpen.value = false
   }
 }
 onMounted(() => document.addEventListener('click', handleOutsideClick))

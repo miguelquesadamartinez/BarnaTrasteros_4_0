@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class RestoreDatabase extends Command
@@ -61,6 +62,7 @@ class RestoreDatabase extends Command
 
             if ($exitCode === 0) {
                 $this->info("Base de datos restaurada correctamente desde: {$filename}");
+                $this->limpiarCache();
                 return self::SUCCESS;
             }
             $this->warn('Cliente mysql no disponible o con error, usando fallback PHP PDO...');
@@ -83,6 +85,7 @@ class RestoreDatabase extends Command
             $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
 
             $this->info("Base de datos restaurada correctamente desde: {$filename}");
+            $this->limpiarCache();
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Error al restaurar: ' . $e->getMessage());
@@ -152,5 +155,15 @@ class RestoreDatabase extends Command
         }
 
         return $statements;
+    }
+
+    /**
+     * La caché (Redis, 24 h) guarda listados y relatorios: tras sustituir la BD
+     * por un backup seguiría mostrando los datos anteriores a la restauración.
+     */
+    private function limpiarCache(): void
+    {
+        Cache::flush();
+        $this->info('Caché limpiada.');
     }
 }
