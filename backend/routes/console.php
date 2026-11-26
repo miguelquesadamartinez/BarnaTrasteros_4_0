@@ -19,7 +19,9 @@ Schedule::job(new GenerarPagosMensuales)->hourlyAt(5)->name('pagos:generar-mes-e
 //Schedule::job(new GenerarPagosMensuales)->everyThirtyMinutes();
 
 // Backup automático diario a las 23:00
-Schedule::command('db:backup')->dailyAt('23:00');
+// Copia completa automática (base de datos + archivos) cada noche. Se conservan
+// las últimas BACKUP_RETENCION (30 por defecto); las más antiguas se borran solas.
+Schedule::command('backup:crear completo --auto')->dailyAt('23:00')->name('backup:nocturno')->withoutOverlapping();
 
 // Limpiar lista de espera (más de 2 meses) todos los días a las 10:00
 Schedule::command('lista-espera:limpiar')->dailyAt('10:00');
@@ -42,13 +44,7 @@ Artisan::command('pagos:reportar-pendientes', function () {
     $this->info('Reporte semanal de pagos pendientes enviado.');
 })->purpose('Enviar por email el reporte semanal de pagos pendientes a REPORT_PAGOS_EMAIL');
 
-//Schedule::command('db:backup')->hourly();
-//Schedule::command('db:backup')->everyThirtyMinutes();
-
-Schedule::command('db:backup')->hourly()->when(function () {
-    // Solo ejecutar el backup automático si estamos en producción
-    return app()->environment('production');
-})->name('backup:hourly')->withoutOverlapping()->runInBackground();
+// (El antiguo backup horario solo en producción se ha sustituido por la copia completa nocturna.)
 
 
 // Comando artisan manual para generar pagos de un mes/año específico

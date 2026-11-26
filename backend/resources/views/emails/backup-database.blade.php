@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Backup de la base de datos</title>
+    <title>Copia de seguridad</title>
 </head>
 <body style="font-family: Arial, sans-serif; background:#ffffff; color:#222; margin:0; padding:0;">
 <div style="max-width:600px;margin:0 auto;padding:24px;">
-    <h2 style="margin:0 0 12px 0;color:#111827;">🗄️ Backup de la base de datos</h2>
-    <p style="font-size:1.02rem;">Se adjunta el volcado de la base de datos generado el <strong>{{ $fecha }}</strong>.</p>
+    <h2 style="margin:0 0 12px 0;color:#111827;">🗄️ Copia de seguridad de BarnaTrasteros</h2>
+    <p style="font-size:1.02rem;">Se adjunta la copia de seguridad generada el <strong>{{ $fecha }}</strong>.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
         <tr>
             <td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:bold;">Archivo</td>

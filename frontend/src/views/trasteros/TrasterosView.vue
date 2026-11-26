@@ -11,7 +11,7 @@
           v-model="search"
           class="form-control"
           style="max-width: 320px"
-          placeholder="Buscar por número, piso o tamaño..."
+          placeholder="Buscar por número, piso, tamaño o cliente..."
         />
         <span class="text-muted">{{ store.trasteros.length }} trasteros</span>
       </div>
@@ -178,6 +178,7 @@
 </template>
 
 <script setup>
+import { normalizarBusqueda } from '@/utils/format'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTrasterosStore } from '@/stores/trasteros'
@@ -275,12 +276,9 @@ const clienteOptions = computed(() =>
 )
 
 const filtered = computed(() => {
-  const q = search.value.toLowerCase()
-  return store.trasteros.filter(
-    (t) =>
-      t.numero.toLowerCase().includes(q) ||
-      t.piso.toLowerCase().includes(q) ||
-      t.tamanyo.toLowerCase().includes(q)
+  const q = normalizarBusqueda(search.value)
+  return store.trasteros.filter((t) =>
+    normalizarBusqueda([t.numero, t.piso, t.tamanyo, t.cliente?.nombre, t.cliente?.apellido].join(' ')).includes(q)
   )
 })
 

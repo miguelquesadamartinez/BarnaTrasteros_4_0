@@ -20,7 +20,7 @@ class BackupDatabaseMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Backup de la base de datos - ' . now()->format('d/m/Y H:i'),
+            subject: 'Copia de seguridad de BarnaTrasteros - ' . now()->format('d/m/Y H:i'),
         );
     }
 

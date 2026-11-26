@@ -1,3 +1,5 @@
-*.sql
-*.sql.gz
+# Copias de seguridad: nunca van al repositorio (contienen datos personales).
+# Se ignora todo salvo lo necesario para que la carpeta exista.
+*
+!.gitignore
 !.gitkeep

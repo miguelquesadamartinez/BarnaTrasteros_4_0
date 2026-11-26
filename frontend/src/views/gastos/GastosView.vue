@@ -77,11 +77,11 @@
               <td>{{ g.descripcion }}</td>
               <td>
                 <span v-if="g.referencia_tipo !== 'general'" class="text-muted" style="font-size:.85rem">
-                  {{ g.referencia_tipo }} #{{ g.referencia_id }}
+                  {{ g.referencia_tipo }} {{ g.referencia_numero || '#' + g.referencia_id }}
                 </span>
                 <span v-else class="badge badge-muted">General</span>
               </td>
-              <td :class="vencido(g) ? 'text-danger' : ''">{{ formatDate(g.fecha_vencimiento) || '—' }}</td>
+              <td :class="vencido(g) ? 'text-danger' : ''">{{ fechaES(g.fecha_vencimiento) || '—' }}</td>
               <td>{{ formatMoney(g.importe_total) }}</td>
               <td class="text-success">{{ formatMoney(g.pagado) }}</td>
               <td :class="+g.importe_total - +g.pagado > 0 ? 'text-danger' : ''">
@@ -132,7 +132,7 @@
         <p>
           <strong>{{ tipoLabel(detalleViewTarget.tipo) }}</strong> — {{ detalleViewTarget.descripcion }}
           <span v-if="detalleViewTarget.referencia_tipo !== 'general'" class="text-muted" style="font-size:.9rem">
-            ({{ detalleViewTarget.referencia_tipo }} #{{ detalleViewTarget.referencia_id }})
+            ({{ detalleViewTarget.referencia_tipo }} {{ detalleViewTarget.referencia_numero || '#' + detalleViewTarget.referencia_id }})
           </span>
         </p>
         <div class="detail-table-wrapper">
@@ -152,7 +152,7 @@
                 <td colspan="6" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleViewTarget.detalles" :key="d.id">
-                <td>{{ formatDate(d.fecha_pago) }}</td>
+                <td>{{ fechaES(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                 <td>{{ d.notas || '—' }}</td>
                 <td>
@@ -256,7 +256,7 @@
               </thead>
               <tbody>
                 <tr v-for="d in editTarget.detalles" :key="d.id">
-                  <td>{{ formatDate(d.fecha_pago) }}</td>
+                  <td>{{ fechaES(d.fecha_pago) }}</td>
                   <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                   <td>{{ d.notas || '—' }}</td>
                   <td>
@@ -381,6 +381,7 @@
 </template>
 
 <script setup>
+import { fechaES, hoyISO } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useGastosStore } from '@/stores/gastos'
 import { useTrasterosStore } from '@/stores/trasteros'
@@ -465,7 +466,7 @@ const defaultForm = () => ({
 const form = ref(defaultForm())
 const pagoForm = ref({ importe: 0, fecha_pago: today(), notas: '' })
 
-function today() { return new Date().toISOString().split('T')[0] }
+function today() { return hoyISO() }
 function formatDate(v) { return v ? v.split('T')[0] : '' }
 function formatMoney(v) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v || 0)

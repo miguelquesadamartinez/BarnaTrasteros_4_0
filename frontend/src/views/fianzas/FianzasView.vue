@@ -47,7 +47,7 @@
                 <span v-if="f.numero" class="badge badge-info">{{ f.tipo === 'piso' ? '🏠' : '📦' }} {{ f.numero }}</span>
                 <span v-else class="text-muted">—</span>
               </td>
-              <td>{{ Number(f.importe).toFixed(2) }} €</td>
+              <td>{{ euros(f.importe) }}</td>
               <td>{{ formatFecha(f.fecha_entrega) }}</td>
               <td v-if="soloDevueltas">{{ formatFecha(f.fecha_devolucion) }}</td>
               <td>
@@ -167,6 +167,7 @@
 </template>
 
 <script setup>
+import { fechaES, euros } from '@/utils/format'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFianzasStore } from '@/stores/fianzas'
@@ -211,7 +212,7 @@ function verNota(texto) {
 
 function formatFecha(f) {
   if (!f) return '—'
-  return new Date(f).toLocaleDateString('es-ES')
+  return fechaES(f)
 }
 
 function todayStr() {

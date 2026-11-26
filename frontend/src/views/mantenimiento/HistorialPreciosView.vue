@@ -43,7 +43,7 @@
                 <strong>{{ diferencia(c) >= 0 ? '+' : '' }}{{ formatMoney(diferencia(c)) }}</strong>
               </td>
               <td :class="diferencia(c) >= 0 ? 'text-success' : 'text-danger'">
-                <strong v-if="c.porcentaje !== null && c.porcentaje !== undefined">{{ c.porcentaje >= 0 ? '+' : '' }}{{ Number(c.porcentaje).toFixed(2) }}%</strong>
+                <strong v-if="c.porcentaje !== null && c.porcentaje !== undefined">{{ porcentaje(c.porcentaje) }}</strong>
                 <span v-else class="text-muted">—</span>
               </td>
               <td>{{ c.motivo || 'Cambio individual' }}</td>
@@ -65,6 +65,7 @@
 </template>
 
 <script setup>
+import { fechaES, porcentaje } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 import AppPagination from '@/components/AppPagination.vue'
@@ -80,7 +81,7 @@ function formatMoney(v) {
 
 function formatFecha(f) {
   if (!f) return '—'
-  return new Date(f).toLocaleString('es-ES')
+  return fechaES(f, { conHora: true })
 }
 
 function diferencia(c) {

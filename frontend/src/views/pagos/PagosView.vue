@@ -208,7 +208,7 @@
                 <td colspan="6" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
-                <td>{{ formatDate(d.fecha_pago) }}</td>
+                <td>{{ fechaES(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                 <td>
                   <button
@@ -313,6 +313,7 @@
 </template>
 
 <script setup>
+import { fechaES, hoyISO } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { usePagosStore } from '@/stores/pagos'
 import { useClientesStore } from '@/stores/clientes'
@@ -367,7 +368,7 @@ const pagoForm = ref({ importe: 0, fecha_pago: today(), notas: '' })
 const newForm = ref({ tipo: '', referencia_id: null, cliente_id: null, mes: new Date().getMonth() + 1, anyo: new Date().getFullYear(), importe_total: 0 })
 
 function today() {
-  return new Date().toISOString().split('T')[0]
+  return hoyISO()
 }
 
 function formatDate(v) { return v ? v.split('T')[0] : '' }

@@ -19,6 +19,7 @@ import RevisionPrecioView from '@/views/mantenimiento/RevisionPrecioView.vue'
 import RevisionPrecioIndividualView from '@/views/mantenimiento/RevisionPrecioIndividualView.vue'
 import HistorialPreciosView from '@/views/mantenimiento/HistorialPreciosView.vue'
 import ClientesArchivadosView from '@/views/mantenimiento/ClientesArchivadosView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView, meta: { title: 'Inicio' } },
@@ -36,11 +37,12 @@ const routes = [
   { path: '/mantenimiento/tamanyo-trasteros', name: 'tamanyo-trasteros', component: TamanyosTrasterosView, meta: { title: 'Tamaños de Trasteros' } },
   { path: '/mantenimiento/facturas', name: 'facturas', component: FacturasView, meta: { title: 'Facturas del Mes' } },
   { path: '/mantenimiento/generar-pagos', name: 'generar-pagos', component: GenerarPagosView, meta: { title: 'Generar Pagos' } },
-  { path: '/mantenimiento/backup', name: 'backup', component: BackupView, meta: { title: 'Backup BD' } },
+  { path: '/mantenimiento/backup', name: 'backup', component: BackupView, meta: { title: 'Copias de seguridad' } },
   { path: '/mantenimiento/revision-precio', name: 'revision-precio', component: RevisionPrecioView, meta: { title: 'Revisión de Precio' } },
   { path: '/mantenimiento/revision-precio/individual', name: 'revision-precio-individual', component: RevisionPrecioIndividualView, meta: { title: 'Cambio de Precio Individual' } },
   { path: '/mantenimiento/historial-precios', name: 'historial-precios', component: HistorialPreciosView, meta: { title: 'Historial de Precios' } },
   { path: '/mantenimiento/clientes-archivados', name: 'clientes-archivados', component: ClientesArchivadosView, meta: { title: 'Clientes Archivados' } },
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView, meta: { title: 'Página no encontrada' } },
 ]
 
 const router = createRouter({
@@ -49,7 +51,7 @@ const router = createRouter({
 })
 
 router.afterEach((to) => {
-  document.title = `${to.meta.title || 'BarnaTrasteros'} — BarnaTrasteros`
+  document.title = to.meta.title ? `${to.meta.title} — BarnaTrasteros` : 'BarnaTrasteros'
 })
 
 export default router

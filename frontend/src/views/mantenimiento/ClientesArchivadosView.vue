@@ -36,7 +36,7 @@
               <td><strong>{{ c.nombre }} {{ c.apellido }}</strong></td>
               <td>{{ c.dni }}</td>
               <td>{{ c.telefono || '—' }}</td>
-              <td>{{ formatDate(c.archivado_at) }}</td>
+              <td>{{ fechaES(c.archivado_at) }}</td>
               <td>
                 <div class="actions-cell">
                   <button class="btn btn-primary btn-sm" title="Desarchivar cliente" @click="doUnarchive(c)" :disabled="restoringId === c.id">
@@ -61,6 +61,7 @@
 </template>
 
 <script setup>
+import { fechaES } from '@/utils/format'
 import { ref, watch, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useClientesStore } from '@/stores/clientes'

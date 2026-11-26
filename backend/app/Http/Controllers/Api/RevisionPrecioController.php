@@ -92,7 +92,8 @@ class RevisionPrecioController extends Controller
 
     private function formatearPorcentaje(float $porcentaje): string
     {
-        return ($porcentaje >= 0 ? '+' : '') . rtrim(rtrim(number_format($porcentaje, 2, '.', ''), '0'), '.') . '%';
+        // Formato español (coma decimal), como el resto de la aplicación: "+1,3 %".
+        return ($porcentaje >= 0 ? '+' : '') . rtrim(rtrim(number_format($porcentaje, 2, ',', ''), '0'), ',') . ' %';
     }
 
     private function avisarClientesCambioPrecio(Collection $cambios): void

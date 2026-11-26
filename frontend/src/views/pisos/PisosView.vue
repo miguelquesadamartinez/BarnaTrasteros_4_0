@@ -11,7 +11,7 @@
           v-model="search"
           class="form-control"
           style="max-width: 320px"
-          placeholder="Buscar por número o piso..."
+          placeholder="Buscar por número, piso o cliente..."
         />
         <span class="text-muted">{{ store.pisos.length }} pisos</span>
       </div>
@@ -161,6 +161,7 @@
 </template>
 
 <script setup>
+import { normalizarBusqueda } from '@/utils/format'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePisosStore } from '@/stores/pisos'
@@ -256,9 +257,9 @@ const clienteOptions = computed(() =>
 )
 
 const filtered = computed(() => {
-  const q = search.value.toLowerCase()
-  return store.pisos.filter(
-    (p) => p.numero.toLowerCase().includes(q) || p.piso.toLowerCase().includes(q)
+  const q = normalizarBusqueda(search.value)
+  return store.pisos.filter((p) =>
+    normalizarBusqueda([p.numero, p.piso, p.cliente?.nombre, p.cliente?.apellido].join(' ')).includes(q)
   )
 })
 

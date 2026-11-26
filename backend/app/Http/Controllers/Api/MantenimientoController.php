@@ -4,15 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerarPagosMensuales;
-use App\Mail\BackupDatabaseMail;
 use App\Models\PagoAlquiler;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Mail;
 
 class MantenimientoController extends Controller
 {
@@ -59,145 +55,6 @@ class MantenimientoController extends Controller
             'mensaje' => $creados > 0
                 ? "Se han generado {$creados} pago(s) para {$mes}/{$anyo}."
                 : "Todos los pagos de {$mes}/{$anyo} ya existían. No se creó ninguno nuevo.",
-        ]);
-    }
-
-    /**
-     * Lista los backups disponibles en mysql_bk.
-     */
-    public function listarBackups(): JsonResponse
-    {
-        $backups = Cache::remember('mantenimiento:backups', now()->addMinutes(5), function () {
-            $dir   = base_path('mysql_bk');
-            $files = File::isDirectory($dir) ? glob($dir . '/*.sql.gz') : [];
-
-            $items = array_map(function ($path) {
-                return [
-                    'filename' => basename($path),
-                    'size_kb'  => round(filesize($path) / 1024, 1),
-                    'fecha'    => date('Y-m-d H:i:s', filemtime($path)),
-                ];
-            }, $files);
-
-            usort($items, fn($a, $b) => strcmp($b['fecha'], $a['fecha']));
-
-            return $items;
-        });
-
-        return response()->json($backups);
-    }
-
-    /**
-     * Genera un backup de la base de datos.
-     */
-    public function backup(): JsonResponse
-    {
-        $exitCode = Artisan::call('db:backup');
-
-        if ($exitCode !== 0) {
-            return response()->json(['error' => 'Error al generar el backup.'], 500);
-        }
-
-        $output = trim(Artisan::output());
-
-        Cache::forget('mantenimiento:backups');
-
-        return response()->json([
-            'ok'      => true,
-            'mensaje' => $output ?: 'Backup generado correctamente.',
-        ]);
-    }
-
-    /**
-     * Genera un backup de la base de datos y lo envía por email a EMAIL_APP_DATA.
-     */
-    public function emailBackup(): JsonResponse
-    {
-        $to = env('EMAIL_APP_DATA');
-
-        if (!$to) {
-            return response()->json(['error' => 'No se ha configurado EMAIL_APP_DATA en el .env.'], 500);
-        }
-
-        $exitCode = Artisan::call('db:backup');
-
-        if ($exitCode !== 0) {
-            return response()->json(['error' => 'Error al generar el backup.'], 500);
-        }
-
-        Cache::forget('mantenimiento:backups');
-
-        $dir   = base_path('mysql_bk');
-        $files = File::isDirectory($dir) ? glob($dir . '/*.sql.gz') : [];
-        rsort($files);
-        $filepath = $files[0] ?? null;
-
-        if (!$filepath || !file_exists($filepath)) {
-            return response()->json(['error' => 'No se ha podido localizar el backup generado.'], 500);
-        }
-
-        try {
-            Mail::to($to)->send(new BackupDatabaseMail($filepath));
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Backup generado pero no se pudo enviar el email: ' . $e->getMessage()], 500);
-        }
-
-        return response()->json([
-            'ok'      => true,
-            'mensaje' => "Backup generado y enviado por email a {$to}.",
-        ]);
-    }
-
-    /**
-     * Restaura la base de datos desde un backup.
-     */
-    public function restore(Request $request): JsonResponse
-    {
-        $request->validate([
-            'filename' => 'required|string',
-        ]);
-
-        $filename = basename($request->filename); // seguridad: no permitir ../
-        $filepath = base_path('mysql_bk/' . $filename);
-
-        if (!file_exists($filepath)) {
-            return response()->json(['error' => "El archivo '{$filename}' no existe."], 422);
-        }
-
-        $exitCode = Artisan::call('db:restore', ['filename' => $filename]);
-
-        if ($exitCode !== 0) {
-            return response()->json(['error' => 'Error al restaurar el backup.'], 500);
-        }
-
-        return response()->json([
-            'ok'      => true,
-            'mensaje' => "Base de datos restaurada desde: {$filename}",
-        ]);
-    }
-    /**
-     * Elimina un archivo de backup.
-     */
-    public function deleteBackup(Request $request): JsonResponse
-    {
-        $request->validate([
-            'filename' => 'required|string',
-        ]);
-
-        $filename = basename($request->filename);
-        $filepath = base_path('mysql_bk/' . $filename);
-
-        if (!file_exists($filepath)) {
-            return response()->json(['error' => "El archivo '{$filename}' no existe."], 422);
-        }
-
-        unlink($filepath);
-
-        Cache::forget('mantenimiento:backups');
-
-        return response()->json([
-            'ok'      => true,
-            'mensaje' => "Backup '{$filename}' eliminado correctamente.",
         ]);
     }
 }

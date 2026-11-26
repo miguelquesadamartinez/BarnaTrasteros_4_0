@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\Fianza;
 use App\Models\PagoAlquiler;
+use App\Support\DatosContacto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -148,18 +149,19 @@ class ClienteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        DatosContacto::normalizar($request);
         $validated = $request->validate([
             'nombre'           => 'required|string|max:100',
             'apellido'         => 'required|string|max:100',
-            'telefono'         => 'nullable|string|max:20',
-            'dni'              => 'required|string|max:20|unique:clientes,dni',
+            'telefono'         => ['nullable', 'string', 'max:20', 'regex:' . DatosContacto::REGEX_TELEFONO],
+            'dni'              => ['required', 'string', 'max:20', 'regex:' . DatosContacto::REGEX_DOCUMENTO, 'unique:clientes,dni'],
             'email'            => 'nullable|email|max:150',
             'foto_dni'         => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
             'direccion'        => 'nullable|string|max:200',
-            'codigo_postal'    => 'nullable|string|max:10',
+            'codigo_postal'    => ['nullable', 'string', 'max:10', 'regex:' . DatosContacto::REGEX_CODIGO_POSTAL],
             'ciudad'           => 'nullable|string|max:100',
             'necesita_factura' => 'nullable|boolean',
-        ]);
+        ], DatosContacto::MENSAJES);
 
         $validated['necesita_factura'] = $request->boolean('necesita_factura');
 
@@ -186,18 +188,19 @@ class ClienteController extends Controller
 
     public function update(Request $request, Cliente $cliente): JsonResponse
     {
+        DatosContacto::normalizar($request);
         $validated = $request->validate([
             'nombre'           => 'required|string|max:100',
             'apellido'         => 'required|string|max:100',
-            'telefono'         => 'nullable|string|max:20',
-            'dni'              => ['required', 'string', 'max:20', Rule::unique('clientes', 'dni')->ignore($cliente->id)],
+            'telefono'         => ['nullable', 'string', 'max:20', 'regex:' . DatosContacto::REGEX_TELEFONO],
+            'dni'              => ['required', 'string', 'max:20', 'regex:' . DatosContacto::REGEX_DOCUMENTO, Rule::unique('clientes', 'dni')->ignore($cliente->id)],
             'email'            => 'nullable|email|max:150',
             'foto_dni'         => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
             'direccion'        => 'nullable|string|max:200',
-            'codigo_postal'    => 'nullable|string|max:10',
+            'codigo_postal'    => ['nullable', 'string', 'max:10', 'regex:' . DatosContacto::REGEX_CODIGO_POSTAL],
             'ciudad'           => 'nullable|string|max:100',
             'necesita_factura' => 'nullable|boolean',
-        ]);
+        ], DatosContacto::MENSAJES);
 
         $validated['necesita_factura'] = $request->boolean('necesita_factura');
 

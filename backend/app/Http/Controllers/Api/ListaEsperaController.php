@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ListaEspera;
 use Illuminate\Http\JsonResponse;
+use App\Support\DatosContacto;
 use Illuminate\Http\Request;
 
 class ListaEsperaController extends Controller
@@ -16,11 +17,12 @@ class ListaEsperaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        DatosContacto::normalizar($request);
         $data = $request->validate([
             'nombre'   => 'required|string|max:150',
-            'telefono' => 'required|string|max:20',
+            'telefono' => ['required', 'string', 'max:20', 'regex:' . DatosContacto::REGEX_TELEFONO],
             'tamanyo'  => 'required|string|max:100',
-        ]);
+        ], DatosContacto::MENSAJES);
 
         $entrada = ListaEspera::create($data);
 

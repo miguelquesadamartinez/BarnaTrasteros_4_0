@@ -23,6 +23,9 @@ class Gasto extends Model
         'notas',
     ];
 
+    // Número visible (T-06, P-2A) de la unidad, para no mostrar el id interno.
+    protected $appends = ['referencia_numero'];
+
     protected $casts = [
         'importe_total' => 'decimal:2',
         'pagado' => 'decimal:2',
@@ -38,6 +41,16 @@ class Gasto extends Model
     public function imagenes(): HasMany
     {
         return $this->hasMany(ImagenGasto::class, 'gasto_id');
+    }
+
+    public function getReferenciaNumeroAttribute(): ?string
+    {
+        if (!$this->referencia_id || !in_array($this->referencia_tipo, ['trastero', 'piso'], true)) {
+            return null;
+        }
+        $modelo = $this->referencia_tipo === 'trastero' ? Trastero::class : Piso::class;
+
+        return $modelo::whereKey($this->referencia_id)->value('numero');
     }
 
     public function getPendienteAttribute(): float

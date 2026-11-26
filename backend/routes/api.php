@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BusquedaController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\FacturaController;
@@ -95,8 +96,13 @@ Route::prefix('revision-precio')->group(function () {
 
 // Mantenimiento - acciones
 Route::post('mantenimiento/generar-pagos', [MantenimientoController::class, 'generarPagos']);
-Route::get('mantenimiento/backups',        [MantenimientoController::class, 'listarBackups']);
-Route::post('mantenimiento/backup',        [MantenimientoController::class, 'backup']);
-Route::post('mantenimiento/backup/email',  [MantenimientoController::class, 'emailBackup']);
-Route::post('mantenimiento/restore',       [MantenimientoController::class, 'restore']);
-Route::delete('mantenimiento/backup',      [MantenimientoController::class, 'deleteBackup']);
+
+// Copias de seguridad (completas, solo BD o solo archivos)
+Route::get('backups',                         [BackupController::class, 'index']);
+Route::post('backups',                        [BackupController::class, 'store']);
+Route::post('backups/subir',                  [BackupController::class, 'subir']);
+Route::get('backups/{filename}/descargar',    [BackupController::class, 'descargar']);
+Route::post('backups/{filename}/verificar',   [BackupController::class, 'verificar']);
+Route::post('backups/{filename}/restaurar',   [BackupController::class, 'restaurar']);
+Route::post('backups/{filename}/email',       [BackupController::class, 'email']);
+Route::delete('backups/{filename}',           [BackupController::class, 'destroy']);

@@ -79,6 +79,7 @@
 </template>
 
 <script setup>
+import { fechaES } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import { useListaEsperaStore } from '@/stores/listaEspera'
 import { useTamanyosStore } from '@/stores/tamanyos'
@@ -98,7 +99,7 @@ const form = ref(emptyForm())
 
 function formatFecha(f) {
   if (!f) return '—'
-  return new Date(f).toLocaleDateString('es-ES')
+  return fechaES(f)
 }
 
 function openNew() {

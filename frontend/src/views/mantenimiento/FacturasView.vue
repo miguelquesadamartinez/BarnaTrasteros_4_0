@@ -58,7 +58,7 @@
             </div>
             <div class="factura-conceptos">
               <div v-for="p in f.pagos" :key="p.id" class="factura-concepto-row">
-                <span>{{ p.tipo === 'piso' ? '🏠' : '📦' }} {{ p.tipo === 'piso' ? 'Piso' : 'Trastero' }} #{{ p.referencia_id }}</span>
+                <span>{{ p.tipo === 'piso' ? '🏠' : '📦' }} {{ p.tipo === 'piso' ? 'Piso' : 'Trastero' }} {{ p.numero || '#' + p.referencia_id }}</span>
                 <span>{{ formatMoney(p.importe_total) }}</span>
               </div>
             </div>

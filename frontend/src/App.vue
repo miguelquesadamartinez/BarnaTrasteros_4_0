@@ -45,7 +45,7 @@
             <li><router-link to="/mantenimiento/generar-pagos" @click="openMenu = null">🧮 Generar Pagos</router-link></li>
             <li><router-link to="/mantenimiento/revision-precio" @click="openMenu = null">📈 Revisión de Precio</router-link></li>
             <li><router-link to="/mantenimiento/historial-precios" @click="openMenu = null">🕘 Historial de Precios</router-link></li>
-            <li><router-link to="/mantenimiento/backup" @click="openMenu = null">💾 Backup BD</router-link></li>
+            <li><router-link to="/mantenimiento/backup" @click="openMenu = null">💾 Copias de seguridad</router-link></li>
           </ul>
         </li>
       </ul>

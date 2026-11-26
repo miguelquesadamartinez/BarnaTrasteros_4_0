@@ -203,7 +203,7 @@
                 <td colspan="5" class="text-center text-muted">Sin pagos registrados</td>
               </tr>
               <tr v-for="d in detalleTarget.detalles" :key="d.id">
-                <td>{{ formatDate(d.fecha_pago) }}</td>
+                <td>{{ fechaES(d.fecha_pago) }}</td>
                 <td class="text-success"><strong>{{ formatMoney(d.importe) }}</strong></td>
                 <td>{{ d.notas || '—' }}</td>
                 <td>
@@ -239,6 +239,7 @@
 </template>
 
 <script setup>
+import { fechaES, hoyISO } from '@/utils/format'
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import api from '@/api'
@@ -281,7 +282,7 @@ const detalleError     = ref('')
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-function today() { return new Date().toISOString().split('T')[0] }
+function today() { return hoyISO() }
 function mesNombre(m) { return MESES[m] || m }
 function formatMoney(v) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v || 0)
@@ -372,7 +373,7 @@ async function registrarPago() {
       .filter((item) => item.detalle !== null)
     pagoResultado.value = { detalles, sobrante: data.sobrante }
     // Recargar para reflejar los que ya no son pendientes
-    await loadPendientes(pendPage.value)
+    await Promise.all([loadPendientes(pendPage.value), loadResumen()])
   } catch (e) {
     pagoError.value = e.response?.data?.error || 'Error al registrar el pago'
   } finally {
@@ -389,6 +390,7 @@ async function doEliminarDetalle(detalle) {
     const idx = pendPagos.value.findIndex((p) => p.id === data.id)
     if (idx !== -1) pendPagos.value[idx] = data
     deleteDetalleId.value = null
+    loadResumen()
   } catch (e) {
     detalleError.value = e.response?.data?.error || 'Error al eliminar el detalle'
   } finally {
@@ -418,7 +420,9 @@ async function avisarImpago(p) {
   }
 }
 
-onMounted(async () => {
+// Las tarjetas se recargan también tras cobrar o anular un cobro; antes solo se
+// cargaban al entrar y mostraban el total pendiente antiguo.
+async function loadResumen() {
   try {
     const { data } = await api.get('/relatorios/resumen-general')
     resumen.value = data
@@ -427,6 +431,11 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  // En paralelo: antes la tabla esperaba a que terminasen las tarjetas.
+  loadResumen()
   loadPendientes(1)
 })
 </script>

@@ -36,6 +36,9 @@ RUN { \
     echo 'realpath_cache_ttl=600'; \
 } > /usr/local/etc/php/conf.d/opcache.ini
 
+# Límites de subida y tiempo para poder subir y restaurar copias de seguridad
+RUN {     echo 'upload_max_filesize=55M';     echo 'post_max_size=60M';     echo 'max_execution_time=600'; } > /usr/local/etc/php/conf.d/uploads.ini
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

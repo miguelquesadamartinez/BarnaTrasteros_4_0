@@ -353,6 +353,7 @@
 </template>
 
 <script setup>
+import { fechaES } from '@/utils/format'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -411,7 +412,7 @@ function contratoUrl(ruta) {
 
 function formatFecha(f) {
   if (!f) return '—'
-  return new Date(f).toLocaleDateString('es-ES')
+  return fechaES(f)
 }
 
 function formatMoney(v) {
@@ -804,9 +805,14 @@ async function generarContratoManual() {
   try {
     const { data } = await api.post(`/clientes/${form.value._id}/contrato`)
     currentContrato.value = data.path
-    tab.location = contratoUrl(data.path)
+    const url = contratoUrl(data.path)
+    if (tab && !tab.closed) {
+      tab.location = url
+    } else {
+      toast.success('Contrato generado. Pulsa aquí para abrirlo.', { timeout: 15000, onClick: () => window.open(url, '_blank') })
+    }
   } catch (e) {
-    tab.close()
+    if (tab) tab.close()
     alert(e.displayMessage || 'No se pudo generar el contrato. ¿Tiene el cliente algún trastero o piso asignado?')
   } finally {
     generandoContrato.value = false
@@ -842,7 +848,9 @@ async function save() {
   // unidades cambiaron — antes solo regeneraba en edición si ya existía un
   // contrato previo, dejando sin contrato a un cliente al que se le asigna
   // su primera unidad después de haberlo creado sin ninguna.
-  const shouldGenerateContract = !editing.value || unitsChanged
+  // Sin ninguna unidad asignada no hay nada que contratar.
+  const tieneUnidades = form.value.trastero_ids.length > 0 || !!form.value.piso_id
+  const shouldGenerateContract = tieneUnidades && (!editing.value || unitsChanged)
 
   // Se abre ya (en blanco) para conservar el gesto de usuario; se rellena luego con el PDF.
   const contractTab = shouldGenerateContract ? window.open('', '_blank') : null
@@ -922,14 +930,24 @@ async function save() {
     }
     pendingFianzas.value = []
 
-    // Generar contrato al crear cliente, o regenerarlo si ya tenía uno y cambió el trastero/piso asignado
-    if (contractTab) {
+    // El contrato se genera siempre que toca. Si el navegador bloqueó la pestaña
+    // emergente, antes no se generaba; ahora se avisa con un enlace para abrirlo.
+    if (shouldGenerateContract) {
       try {
         const { data } = await api.post(`/clientes/${cliente.id}/contrato`)
         currentContrato.value = data.path
-        contractTab.location = contratoUrl(data.path)
+        const url = contratoUrl(data.path)
+        if (contractTab && !contractTab.closed) {
+          contractTab.location = url
+        } else {
+          toast.success('Contrato generado. Pulsa aquí para abrirlo.', {
+            timeout: 15000,
+            onClick: () => window.open(url, '_blank'),
+          })
+        }
       } catch (e) {
-        contractTab.close()
+        if (contractTab) contractTab.close()
+        toast.error(e.displayMessage || 'El cliente se guardó, pero no se pudo generar el contrato.')
       }
     }
 

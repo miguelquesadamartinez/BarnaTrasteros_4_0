@@ -67,7 +67,7 @@
                     </span>
                   </td>
                   <td>{{ t.cliente ? `${t.cliente.nombre} ${t.cliente.apellido}` : '—' }}</td>
-                  <td>{{ formatDate(t.fecha_inicio_alquiler) || '—' }}</td>
+                  <td>{{ fechaES(t.fecha_inicio_alquiler) || '—' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -116,7 +116,7 @@
                     </span>
                   </td>
                   <td>{{ p.cliente ? `${p.cliente.nombre} ${p.cliente.apellido}` : '—' }}</td>
-                  <td>{{ formatDate(p.fecha_inicio_alquiler) || '—' }}</td>
+                  <td>{{ fechaES(p.fecha_inicio_alquiler) || '—' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -262,12 +262,12 @@
                   <td>{{ g.descripcion }}</td>
                   <td>
                     <span v-if="g.referencia_tipo !== 'general'" class="text-muted" style="font-size:.85rem">
-                      {{ g.referencia_tipo }} #{{ g.referencia_id }}
+                      {{ g.referencia_tipo }} {{ g.referencia_numero || '#' + g.referencia_id }}
                     </span>
                     <span v-else>General</span>
                   </td>
-                  <td>{{ formatDate(g.fecha_emision) }}</td>
-                  <td :class="gastoVencido(g) ? 'text-danger' : ''">{{ formatDate(g.fecha_vencimiento) || '—' }}</td>
+                  <td>{{ fechaES(g.fecha_emision) }}</td>
+                  <td :class="gastoVencido(g) ? 'text-danger' : ''">{{ fechaES(g.fecha_vencimiento) || '—' }}</td>
                   <td>{{ formatMoney(g.importe_total) }}</td>
                   <td class="text-success">{{ formatMoney(g.pagado) }}</td>
                   <td :class="+g.importe_total - +g.pagado > 0 ? 'text-danger' : ''">
@@ -293,6 +293,7 @@
 </template>
 
 <script setup>
+import { fechaES } from '@/utils/format'
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 
